@@ -1,43 +1,24 @@
-import { useNotes } from '../context/NotesContext';
-import { generateSummary } from '../utils/summarizer';
+import { useNotes } from "../context/NotesContext";
 
 const GenerateButton = () => {
-  const { 
-    originalNotes, 
-    setSummaryOutput, 
-    isGenerating, 
-    setIsGenerating,
-    addToHistory
-  } = useNotes();
-  
+  const { originalNotes, isGenerating, generateSummary, error } = useNotes();
+
   const handleGenerate = async () => {
     if (!originalNotes || isGenerating) return;
-    
-    setIsGenerating(true);
-    
-    try {
-      const summary = await generateSummary(originalNotes);
-      setSummaryOutput(summary);
-      
-      addToHistory({
-        originalText: originalNotes,
-        summaryText: summary
-      });
-    } catch (error) {
-      console.error('Error generating summary:', error);
-    } finally {
-      setIsGenerating(false);
-    }
+
+    // Use the generateSummary function from context which now calls the backend
+    await generateSummary();
   };
-  
+
   return (
     <button
       onClick={handleGenerate}
       disabled={!originalNotes || isGenerating}
       className={`px-8 py-3 rounded-lg text-white font-medium transition-all transform hover:translate-y-[-2px] 
-        ${!originalNotes || isGenerating 
-          ? 'bg-blue-400 cursor-not-allowed' 
-          : 'bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg'
+        ${
+          !originalNotes || isGenerating
+            ? "bg-blue-400 cursor-not-allowed"
+            : "bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg"
         }`}
     >
       {isGenerating ? (
@@ -46,7 +27,7 @@ const GenerateButton = () => {
           Generating...
         </span>
       ) : (
-        'Generate Summary'
+        "Generate Summary"
       )}
     </button>
   );
