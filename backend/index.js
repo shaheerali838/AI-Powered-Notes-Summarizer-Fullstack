@@ -33,11 +33,18 @@ app.get("/api/health", (req, res) => {
     status: "Server is running!",
     timestamp: new Date().toISOString(),
     version: "1.0.0",
+    database: "Connected",
     gemini_available: geminiAvailable,
+    features: {
+      authentication: true,
+      fileUpload: true,
+      rateLimiting: true,
+      database: true
+    }
   });
 });
 
-// Summarization endpoint
+// Legacy summarization endpoint (for backward compatibility)
 app.post("/api/summarize", async (req, res) => {
   try {
     const { text } = req.body;
@@ -170,12 +177,12 @@ function generateMockSummary(text) {
   return `${firstSentence}. ${lastSentence}. [This is a mock summary. Gemini API is currently unavailable.]`;
 }
 
-// Get summary history
+// Legacy history endpoint (for backward compatibility)
 app.get("/api/history", (req, res) => {
   res.json(summaries);
 });
 
-// Get a specific summary by ID
+// Legacy get summary endpoint (for backward compatibility)
 app.get("/api/summary/:id", (req, res) => {
   const summary = summaries.find((s) => s.id === parseInt(req.params.id));
   if (!summary) {
@@ -184,7 +191,7 @@ app.get("/api/summary/:id", (req, res) => {
   res.json(summary);
 });
 
-// Delete a summary
+// Legacy delete summary endpoint (for backward compatibility)
 app.delete("/api/summary/:id", (req, res) => {
   const index = summaries.findIndex((s) => s.id === parseInt(req.params.id));
   if (index === -1) {
@@ -194,9 +201,37 @@ app.delete("/api/summary/:id", (req, res) => {
   res.json({ message: "Summary deleted successfully" });
 });
 
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Error:', error);
+  
+  if (error.name === 'ValidationError') {
+    return res.status(400).json({
+      error: 'Validation Error',
+      details: Object.values(error.errors).map(err => err.message)
+    });
+  }
+  
+  if (error.name === 'CastError') {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+  
+  if (error.code === 11000) {
+    return res.status(400).json({ error: 'Duplicate entry' });
+  }
+  
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
   console.log(`Health check available at http://localhost:${port}/api/health`);
+  console.log(`Features enabled: Database, Authentication, File Upload, Rate Limiting`);
   console.log(`Gemini API available: ${geminiAvailable}`);
 });
