@@ -4,20 +4,19 @@ const NotesContext = createContext();
 
 export const useNotes = () => {
   const context = useContext(NotesContext);
-  if (!context) {
-    throw new Error("useNotes must be used within a NotesProvider");
-  }
+  if (!context) throw new Error("useNotes must be used within NotesProvider");
   return context;
 };
 
 export const NotesProvider = ({ children }) => {
   const [originalNotes, setOriginalNotes] = useState("");
-  const [summaryOutput, setSummaryOutput] = useState("");
+  const [summaryOutput, setSummaryOutput] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [summaryHistory, setSummaryHistory] = useState([]);
   const [error, setError] = useState("");
 
-  // Function to call the backend API for summarization
+  // 1️⃣ Define all functions first
+
   const generateSummary = async () => {
     if (!originalNotes.trim()) {
       setError("Please enter some text to summarize");
@@ -28,26 +27,28 @@ export const NotesProvider = ({ children }) => {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/summarize", {
+      const response = await fetch("/api/summarize", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: originalNotes }),
       });
+      // console.log(response);
 
-      if (!response.ok) {
-        throw new Error("Failed to generate summary");
-      }
+      if (!response.ok) throw new Error("Failed to generate summary");
 
       const data = await response.json();
-      setSummaryOutput(data.summary);
 
-      // Add to history
+      setSummaryOutput({
+        original: data.original,
+        summary: data.summary,
+        keyPoints: data.keyPoints || [],
+      });
+
       addToHistory({
-        originalText: originalNotes,
+        originalText: data.original,
         summaryText: data.summary,
-        id: data.id,
+        keyPoints: data.keyPoints || [],
+        id: data.id || Date.now(),
       });
     } catch (err) {
       setError(err.message);
@@ -57,25 +58,29 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Function to fetch history from backend
+  const addToHistory = ({ originalText, summaryText, keyPoints, id }) => {
+    const newSummary = {
+      id: id.toString(),
+      originalText,
+      summaryText,
+      keyPoints,
+      date: new Date(),
+    };
+    setSummaryHistory((prev) => [newSummary, ...prev]);
+  };
+
   const fetchHistory = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/history");
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch history");
-      }
-
+      const response = await fetch("/api/history");
+      if (!response.ok) throw new Error("Failed to fetch history");
       const data = await response.json();
-
-      // Convert backend history format to frontend format
       const formattedHistory = data.map((item) => ({
         id: item.id.toString(),
         originalText: item.original,
         summaryText: item.summary,
+        keyPoints: item.keyPoints || [],
         date: new Date(item.timestamp),
       }));
-
       setSummaryHistory(formattedHistory);
     } catch (err) {
       setError(err.message);
@@ -83,18 +88,10 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Function to delete a summary from backend
   const deleteSummary = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/summary/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete summary");
-      }
-
-      // Remove from local history
+      const response = await fetch(`/api/summary/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete summary");
       setSummaryHistory((prev) =>
         prev.filter((item) => item.id !== id.toString())
       );
@@ -104,22 +101,13 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  const addToHistory = ({ originalText, summaryText, id }) => {
-    const newSummary = {
-      id: id.toString(),
-      originalText,
-      summaryText,
-      date: new Date(),
-    };
-    setSummaryHistory((prev) => [newSummary, ...prev]);
-  };
-
   const clearNotes = () => {
     setOriginalNotes("");
-    setSummaryOutput("");
+    setSummaryOutput(null);
     setError("");
   };
 
+  // 2️⃣ Then use them in the provider value
   return (
     <NotesContext.Provider
       value={{
