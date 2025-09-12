@@ -39,8 +39,8 @@ app.get("/api/health", (req, res) => {
       authentication: true,
       fileUpload: true,
       rateLimiting: true,
-      database: true
-    }
+      database: true,
+    },
   });
 });
 
@@ -203,35 +203,37 @@ app.delete("/api/summary/:id", (req, res) => {
 
 // Error handling middleware
 app.use((error, req, res, next) => {
-  console.error('Error:', error);
-  
-  if (error.name === 'ValidationError') {
+  console.error("Error:", error);
+
+  if (error.name === "ValidationError") {
     return res.status(400).json({
-      error: 'Validation Error',
-      details: Object.values(error.errors).map(err => err.message)
+      error: "Validation Error",
+      details: Object.values(error.errors).map((err) => err.message),
     });
   }
-  
-  if (error.name === 'CastError') {
-    return res.status(400).json({ error: 'Invalid ID format' });
+
+  if (error.name === "CastError") {
+    return res.status(400).json({ error: "Invalid ID format" });
   }
-  
+
   if (error.code === 11000) {
-    return res.status(400).json({ error: 'Duplicate entry' });
+    return res.status(400).json({ error: "Duplicate entry" });
   }
-  
-  res.status(500).json({ error: 'Internal server error' });
+
+  res.status(500).json({ error: "Internal server error" });
 });
 
 // 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+app.use("*", (req, res) => {
+  res.status(404).json({ error: "Route not found" });
 });
 
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
   console.log(`Health check available at http://localhost:${port}/api/health`);
-  console.log(`Features enabled: Database, Authentication, File Upload, Rate Limiting`);
+  console.log(
+    `Features enabled: Database, Authentication, File Upload, Rate Limiting`
+  );
   console.log(`Gemini API available: ${geminiAvailable}`);
 });
