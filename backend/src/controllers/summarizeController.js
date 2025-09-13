@@ -1,4 +1,7 @@
+// src/controllers/summarizeController.js
 import { summarizeWithGemini } from "../services/summarizerService.js";
+import { addToHistory } from "../services/historyService.js";
+
 export const summarizeController = async (req, res) => {
   try {
     const { text } = req.body;
@@ -6,9 +9,16 @@ export const summarizeController = async (req, res) => {
       return res.status(400).json({ error: "Text is required" });
     }
 
-    const summaryResult = await summarizeWithGemini(text);
+    const summary = await summarizeWithGemini(text);
 
-    res.json(summaryResult); // ✅ send the object directly
+    // ✅ Save to history
+    addToHistory({
+      original: text,
+      summary: summary.summary,
+      keyPoints: summary.keyPoints,
+    });
+
+    res.json(summary);
   } catch (err) {
     console.error("❌ Controller Error:", err);
     res
