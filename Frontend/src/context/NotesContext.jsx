@@ -15,8 +15,7 @@ export const NotesProvider = ({ children }) => {
   const [summaryHistory, setSummaryHistory] = useState([]);
   const [error, setError] = useState("");
 
-  // 1️⃣ Define all functions first
-
+  // Generate summary
   const generateSummary = async () => {
     if (!originalNotes.trim()) {
       setError("Please enter some text to summarize");
@@ -32,23 +31,24 @@ export const NotesProvider = ({ children }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: originalNotes }),
       });
-      // console.log(response);
 
       if (!response.ok) throw new Error("Failed to generate summary");
 
       const data = await response.json();
 
+      // data: { original, summary, keyPoints }
       setSummaryOutput({
-        original: data.original,
         summary: data.summary,
         keyPoints: data.keyPoints || [],
+        original: data.original,
       });
 
       addToHistory({
-        originalText: data.original,
-        summaryText: data.summary,
-        keyPoints: data.keyPoints || [],
         id: data.id || Date.now(),
+        original: data.original,
+        summary: data.summary,
+        keyPoints: data.keyPoints || [],
+        date: new Date(),
       });
     } catch (err) {
       setError(err.message);
@@ -58,29 +58,33 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  const addToHistory = ({ originalText, summaryText, keyPoints, id }) => {
+  // Add summary to local history state
+  const addToHistory = ({ id, original, summary, keyPoints, date }) => {
     const newSummary = {
       id: id.toString(),
-      originalText,
-      summaryText,
+      original,
+      summary,
       keyPoints,
-      date: new Date(),
+      date,
     };
     setSummaryHistory((prev) => [newSummary, ...prev]);
   };
 
+  // Fetch history from backend
   const fetchHistory = async () => {
     try {
       const response = await fetch("/api/history");
       if (!response.ok) throw new Error("Failed to fetch history");
       const data = await response.json();
+
       const formattedHistory = data.map((item) => ({
         id: item.id.toString(),
-        originalText: item.original,
-        summaryText: item.summary,
+        original: item.original,
+        summary: item.summary,
         keyPoints: item.keyPoints || [],
         date: new Date(item.timestamp),
       }));
+
       setSummaryHistory(formattedHistory);
     } catch (err) {
       setError(err.message);
@@ -107,7 +111,6 @@ export const NotesProvider = ({ children }) => {
     setError("");
   };
 
-  // 2️⃣ Then use them in the provider value
   return (
     <NotesContext.Provider
       value={{

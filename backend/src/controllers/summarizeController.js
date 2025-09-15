@@ -1,6 +1,5 @@
-// src/controllers/summarizeController.js
 import { summarizeWithGemini } from "../services/summarizerService.js";
-import { addToHistory } from "../services/historyService.js";
+import { saveSummary } from "../services/historyServices.js";
 
 export const summarizeController = async (req, res) => {
   try {
@@ -9,16 +8,17 @@ export const summarizeController = async (req, res) => {
       return res.status(400).json({ error: "Text is required" });
     }
 
-    const summary = await summarizeWithGemini(text);
+    const { summary, keyPoints } = await summarizeWithGemini(text);
 
-    // ✅ Save to history
-    addToHistory({
+    // Save in Firebase Firestore
+    const saved = await saveSummary(text, summary, keyPoints);
+
+    res.json({
+      id: saved.id,
       original: text,
-      summary: summary.summary,
-      keyPoints: summary.keyPoints,
+      summary,
+      keyPoints,
     });
-
-    res.json(summary);
   } catch (err) {
     console.error("❌ Controller Error:", err);
     res

@@ -1,20 +1,38 @@
-// src/services/historyService.js
+// src/services/historyServices.js
+import { db } from "../config/firebase.js";
 
-let history = [];
+const historyCollection = db.collection("history");
 
-/**
- * Add an item to history
- */
-export function addToHistory(item) {
-  history.unshift({
-    id: Date.now(),
-    ...item,
+// Save a new summary
+export const saveSummary = async (original, summary, keyPoints) => {
+  const timestamp = new Date().toISOString();
+  const docRef = await historyCollection.add({
+    original,
+    summary,
+    keyPoints,
+    timestamp,
   });
-}
 
-/**
- * Get all history
- */
-export function getHistory() {
-  return history;
-}
+  return {
+    id: docRef.id,
+    original,
+    summary,
+    keyPoints,
+    timestamp,
+  };
+};
+
+// Get all summaries
+export const getHistory = async () => {
+  const snapshot = await historyCollection.orderBy("timestamp", "desc").get();
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+};
+
+// Delete a summary by ID
+export const deleteHistory = async (id) => {
+  await historyCollection.doc(id).delete();
+  return { success: true };
+};

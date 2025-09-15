@@ -13,9 +13,11 @@ function App() {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/about" element={<AboutPage />} />
+            <Route path="history" element={<HistoryPage />} />
+            <Route path="about" element={<AboutPage />} />
           </Route>
+
+          {/* Login page is outside Layout */}
           <Route path="/login" element={<LoginPage />} />
         </Routes>
       </Router>

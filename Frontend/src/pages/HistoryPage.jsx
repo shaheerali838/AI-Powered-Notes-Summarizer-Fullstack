@@ -57,13 +57,30 @@ const HistoryPage = () => {
   };
 
   const formatDate = (timestamp) => {
+    if (!timestamp) return "Unknown date";
+
+    // If it's a Firestore Timestamp object
+    if (timestamp._seconds) {
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+      }).format(new Date(timestamp._seconds * 1000));
+    }
+
+    // If it's already a JS Date string/number
+    const date = new Date(timestamp);
+    if (isNaN(date)) return "Invalid date";
+
     return new Intl.DateTimeFormat("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
       hour: "numeric",
       minute: "numeric",
-    }).format(new Date(timestamp));
+    }).format(date);
   };
 
   if (loading) {
@@ -135,11 +152,15 @@ const HistoryPage = () => {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="font-medium text-gray-900">
-                    {item.original.substring(0, 50)}
-                    {item.original.length > 50 ? "..." : ""}
+                    {typeof item.original === "string"
+                      ? item.original.substring(0, 50) +
+                        (item.original.length > 50 ? "..." : "")
+                      : "No original notes available"}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {formatDate(item.timestamp)}
+                    {item.timestamp
+                      ? formatDate(item.timestamp)
+                      : "Unknown date"}
                   </p>
                 </div>
 
@@ -165,7 +186,9 @@ const HistoryPage = () => {
               </div>
 
               <div className="text-sm text-gray-700 line-clamp-2">
-                {item.summary}
+                {typeof item.summary === "string"
+                  ? item.summary
+                  : item.summary?.summary || "No summary available"}
               </div>
             </div>
           ))}

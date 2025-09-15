@@ -9,23 +9,54 @@ const SummaryDisplay = () => {
   const summaryText = summaryOutput?.summary || "";
   let keyPoints = summaryOutput?.keyPoints || [];
 
-  // Remove any heading lines like "(Re-Summarized in Bullet Points):**"
+  // Remove unwanted heading lines if present
   if (keyPoints.length && keyPoints[0].includes("Re-Summarized")) {
     keyPoints = keyPoints.slice(1);
   }
 
+  // Copy summary + key points
   const handleCopy = () => {
     if (!summaryText) return;
-
     let textToCopy = summaryText;
     if (keyPoints.length > 0) {
       textToCopy += "\n\nKey Points:\n" + keyPoints.join("\n");
     }
-
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Convert numbered flat list into nested tree
+  const buildTree = (points) => {
+    const root = [];
+    const stack = [{ level: 0, children: root }];
+
+    points.forEach((point) => {
+      const match = point.match(/^(\d+(\.\d+)*)\s/);
+      const level = match ? match[1].split(".").length : 1;
+      const node = { text: point, children: [] };
+
+      while (stack.length > level) stack.pop();
+      stack[stack.length - 1].children.push(node);
+      stack.push({ level, children: node.children });
+    });
+
+    return root;
+  };
+
+  // Recursively render tree
+  const renderTree = (nodes) => (
+    <ol className="list-decimal ml-6 space-y-1">
+      {nodes.map((node, i) => (
+        <li key={i}>
+          {node.text}
+          {node.children.length > 0 && renderTree(node.children)}
+        </li>
+      ))}
+    </ol>
+  );
+
+  const tree = buildTree(keyPoints);
 
   return (
     <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm h-full relative">
@@ -45,24 +76,17 @@ const SummaryDisplay = () => {
           </div>
         ) : summaryText ? (
           <div className="text-gray-700 whitespace-pre-line">
-            {/* Summary */}
             <h3 className="text-md font-semibold mb-2">Summary</h3>
             <p className="mb-4">{summaryText}</p>
 
-            {/* Key Points */}
-            {keyPoints.length > 0 && (
+            {tree.length > 0 && (
               <div>
                 <h3 className="text-md font-semibold mb-2">Key Points</h3>
-                <ul className="list-disc list-inside space-y-1">
-                  {keyPoints.map((point, idx) => (
-                    <li key={idx}>{point}</li>
-                  ))}
-                </ul>
+                {renderTree(tree)}
               </div>
             )}
           </div>
         ) : (
-          // Skeleton Loading
           <div className="space-y-2">
             <div className="h-4 bg-gray-100 rounded w-full"></div>
             <div className="h-4 bg-gray-100 rounded w-5/6"></div>
