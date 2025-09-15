@@ -26,11 +26,14 @@ export const NotesProvider = ({ children }) => {
     setError("");
 
     try {
-      const response = await fetch("/api/summarize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: originalNotes }),
-      });
+      const response = await fetch(
+        `${process.env.VITE_APP_API_URL}/api/summarize`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: originalNotes }),
+        }
+      );
 
       if (!response.ok) throw new Error("Failed to generate summary");
 

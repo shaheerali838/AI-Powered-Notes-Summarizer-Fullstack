@@ -12,7 +12,7 @@ app.use(express.json());
 // ✅ Enable CORS for frontend (Vite default port 5173)
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://ai-powered-notes-summarizer.vercel.app",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
