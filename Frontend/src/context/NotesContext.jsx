@@ -27,7 +27,7 @@ export const NotesProvider = ({ children }) => {
 
     try {
       const response = await fetch(
-        `${process.env.VITE_APP_API_URL}/api/summarize`,
+        `${import.meta.env.VITE_APP_API_URL}/api/summarize`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
