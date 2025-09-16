@@ -15,6 +15,9 @@ export const NotesProvider = ({ children }) => {
   const [summaryHistory, setSummaryHistory] = useState([]);
   const [error, setError] = useState("");
 
+  // ✅ API base URL from env
+  const API_URL = import.meta.env.VITE_APP_API_URL;
+
   // Generate summary
   const generateSummary = async () => {
     if (!originalNotes.trim()) {
@@ -26,14 +29,11 @@ export const NotesProvider = ({ children }) => {
     setError("");
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_APP_API_URL}/api/summarize`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: originalNotes }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/summarize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: originalNotes }),
+      });
 
       if (!response.ok) throw new Error("Failed to generate summary");
 
@@ -76,7 +76,7 @@ export const NotesProvider = ({ children }) => {
   // Fetch history from backend
   const fetchHistory = async () => {
     try {
-      const response = await fetch("/api/history");
+      const response = await fetch(`${API_URL}/api/history`);
       if (!response.ok) throw new Error("Failed to fetch history");
       const data = await response.json();
 
@@ -97,7 +97,9 @@ export const NotesProvider = ({ children }) => {
 
   const deleteSummary = async (id) => {
     try {
-      const response = await fetch(`/api/summary/${id}`, { method: "DELETE" });
+      const response = await fetch(`${API_URL}/api/summary/${id}`, {
+        method: "DELETE",
+      });
       if (!response.ok) throw new Error("Failed to delete summary");
       setSummaryHistory((prev) =>
         prev.filter((item) => item.id !== id.toString())
