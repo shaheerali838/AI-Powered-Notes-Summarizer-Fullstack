@@ -6,3 +6,4 @@
 src/config/ai-notes-summarize-firebase-adminsdk-*.json
 serviceAccountKey.json
 firebase-debug.log
+.env
