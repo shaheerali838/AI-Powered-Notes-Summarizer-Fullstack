@@ -1,14 +1,25 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
+import { useUI } from "../context/UIContext";
 
 const Layout = () => {
+  const { sidebarExpanded, isMobile } = useUI();
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         <Sidebar />
-        <main className="flex-1 overflow-auto p-4">
+        <main 
+          className={`flex-1 overflow-auto p-4 transition-all duration-300 ease-in-out ${
+            isMobile 
+              ? 'ml-0' 
+              : sidebarExpanded 
+                ? 'ml-64' 
+                : 'ml-16'
+          }`}
+        >
           <Outlet />
         </main>
       </div>

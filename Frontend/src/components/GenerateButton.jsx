@@ -11,25 +11,31 @@ const GenerateButton = () => {
   };
 
   return (
-    <button
-      onClick={handleGenerate}
-      disabled={!originalNotes || isGenerating}
-      className={`px-8 py-3 rounded-lg text-white font-medium transition-all transform hover:translate-y-[-2px] 
-        ${
-          !originalNotes || isGenerating
-            ? "bg-blue-400 cursor-not-allowed"
-            : "bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg"
-        }`}
-    >
-      {isGenerating ? (
-        <span className="flex items-center gap-2">
-          <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-          Generating...
-        </span>
-      ) : (
-        "Generate Summary"
+    <div className="flex flex-col items-center gap-2">
+      <button
+        onClick={handleGenerate}
+        disabled={!originalNotes || isGenerating}
+        className={`px-8 py-4 rounded-lg text-white font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl 
+          ${
+            !originalNotes || isGenerating
+              ? "bg-gray-400 cursor-not-allowed shadow-none transform-none"
+              : "bg-[#4F88FF] hover:bg-[#3B7BFF]"
+          }`}
+      >
+        {isGenerating ? (
+          <span className="flex items-center gap-3">
+            <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
+            Generating Summary...
+          </span>
+        ) : (
+          "Generate Summary"
+        )}
+      </button>
+      
+      {error && (
+        <p className="text-red-600 text-sm mt-2">{error}</p>
       )}
-    </button>
+    </div>
   );
 };
 
