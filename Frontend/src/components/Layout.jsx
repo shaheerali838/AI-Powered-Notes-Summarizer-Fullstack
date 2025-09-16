@@ -7,16 +7,22 @@ const Layout = () => {
   const { sidebarExpanded, isMobile } = useUI();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50">
+      {/* Fixed Navbar at top */}
       <Navbar />
-      <div className="flex flex-1 overflow-hidden relative">
+      
+      {/* Content area below navbar */}
+      <div className="flex overflow-hidden relative" style={{ height: 'calc(100vh - 64px)', marginTop: '64px' }}>
+        {/* Sidebar */}
         <Sidebar />
+        
+        {/* Main content area */}
         <main 
-          className={`flex-1 overflow-auto p-4 transition-all duration-300 ease-in-out ${
+          className={`flex-1 overflow-auto p-6 transition-all duration-300 ease-in-out ${
             isMobile 
               ? 'ml-0' 
               : sidebarExpanded 
-                ? 'ml-64' 
+                ? 'ml-64'
                 : 'ml-16'
           }`}
         >

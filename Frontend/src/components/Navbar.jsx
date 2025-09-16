@@ -1,18 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Brain } from 'lucide-react';
-import { useUI } from '../context/UIContext';
 
 const Navbar = () => {
-  const { sidebarExpanded, isMobile } = useUI();
-
   return (
-    <nav className={`bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between transition-all duration-300 ${
-      isMobile 
-        ? 'pl-4' 
-        : sidebarExpanded 
-          ? 'pl-72' 
-          : 'pl-24'
-    }`}>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between h-16">
       <div className="flex items-center gap-3">
         <Link to="/" className="flex items-center gap-2 text-xl font-semibold text-gray-900">
           <Brain className="h-6 w-6 text-[#4F88FF]" />
