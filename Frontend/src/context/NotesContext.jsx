@@ -16,7 +16,7 @@ export const NotesProvider = ({ children }) => {
   const [error, setError] = useState("");
 
   // ✅ API base URL from env
-  const API_URL = import.meta.env.VITE_APP_API_URL;
+  const API_URL = "https://ai-powered-notes-summarizer-backend.vercel.app";
 
   // Generate summary
   const generateSummary = async () => {
