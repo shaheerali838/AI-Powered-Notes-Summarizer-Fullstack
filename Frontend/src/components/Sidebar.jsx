@@ -8,6 +8,8 @@ import {
   X,
   ChevronDown,
   FileText,
+  Lock,
+  User,
 } from "lucide-react";
 import { useNotes } from "../context/NotesContext";
 import { useUI } from "../context/UIContext";
@@ -15,7 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import { useState, useEffect } from "react";
 
 const Sidebar = () => {
-  const { clearNotes, summaryHistory, fetchHistory } = useNotes();
+  const { clearNotes, summaryHistory, fetchHistory, loadSummary } = useNotes();
   const {
     sidebarExpanded,
     toggleSidebar,
@@ -23,7 +25,7 @@ const Sidebar = () => {
     toggleHistory,
     isMobile,
   } = useUI();
-  const { isGuest } = useAuth();
+  const { isGuest, openAuthModal } = useAuth();
   const location = useLocation();
   const [showMobileOverlay, setShowMobileOverlay] = useState(false);
 
@@ -34,10 +36,15 @@ const Sidebar = () => {
     }
   };
 
-  const handleHistoryItemClick = () => {
+  const handleHistoryItemClick = (summaryItem) => {
+    loadSummary(summaryItem);
     if (isMobile) {
       setShowMobileOverlay(false);
     }
+  };
+
+  const handleSignInPrompt = () => {
+    openAuthModal('login');
   };
 
   useEffect(() => {
@@ -151,38 +158,79 @@ const Sidebar = () => {
               {historyExpanded && (sidebarExpanded || isMobile) && (
                 <div className="ml-4 space-y-1 max-h-64 overflow-y-auto">
                   {summaryHistory.length === 0 ? (
-                    <p className="text-sm text-gray-500 px-4 py-2">
-                      {isGuest
-                        ? "Sign in to save your history"
-                        : "No summaries yet"}
-                    </p>
-                  ) : (
-                    summaryHistory.slice(0, 10).map((item) => (
-                      <Link
-                        key={item.id}
-                        to="/"
-                        onClick={handleHistoryItemClick}
-                        className="block px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
-                      >
-                        <div className="flex items-start gap-2">
-                          <FileText className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="truncate">
-                              {typeof item.original === "string"
-                                ? item.original.substring(0, 30) + "..."
-                                : "Summary"}
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              {formatDate(item.date)}
-                            </p>
-                          </div>
+                    <div className="px-4 py-2">
+                      {isGuest ? (
+                        <div className="text-center">
+                          <Lock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-xs text-gray-500 mb-2">
+                            Sign in to save your summaries permanently
+                          </p>
+                          <button
+                            onClick={handleSignInPrompt}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                          >
+                            Sign In
+                          </button>
                         </div>
-                      </Link>
-                    ))
+                      ) : (
+                        <p className="text-sm text-gray-500">No summaries yet</p>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {isGuest && (
+                        <div className="px-4 py-2 mb-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                          <div className="flex items-center gap-1 mb-1">
+                            <User className="h-3 w-3 text-yellow-600" />
+                            <span className="text-xs font-medium text-yellow-800">Guest Mode</span>
+                          </div>
+                          <p className="text-xs text-yellow-700">
+                            History cleared on refresh
+                          </p>
+                        </div>
+                      )}
+                      {summaryHistory.slice(0, 10).map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => handleHistoryItemClick(item)}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          <div className="flex items-start gap-2">
+                            <FileText className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="truncate">
+                                {typeof item.original === "string"
+                                  ? item.original.substring(0, 30) + "..."
+                                  : "Summary"}
+                              </p>
+                              <div className="flex items-center gap-2 text-xs text-gray-400">
+                                <span>{formatDate(item.timestamp || item.createdAt)}</span>
+                                {item.wordCount && (
+                                  <span>• {item.wordCount} words</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </>
                   )}
                 </div>
               )}
             </div>
+
+            {/* Quick Stats for authenticated users */}
+            {!isGuest && summaryHistory.length > 0 && (sidebarExpanded || isMobile) && (
+              <div className="px-4 py-2 bg-blue-50 rounded-lg">
+                <p className="text-xs font-medium text-blue-800 mb-1">Your Stats</p>
+                <div className="text-xs text-blue-600 space-y-1">
+                  <div>{summaryHistory.length} summaries</div>
+                  <div>
+                    {summaryHistory.reduce((acc, item) => acc + (item.wordCount || 0), 0)} words processed
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Settings Link */}
             <SidebarLink
