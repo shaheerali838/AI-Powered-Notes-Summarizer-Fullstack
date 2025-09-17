@@ -16,15 +16,13 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      // Only externalize real browser-safe modules if needed
       external: [
         "firebase",
         "firebase/app",
         "firebase/auth",
         "firebase/firestore",
         "firebase/analytics",
-        "firebase-admin", // if you accidentally imported it in frontend
-        "fs", // Node built-in
-        "path", // Node built-in
       ],
     },
   },
