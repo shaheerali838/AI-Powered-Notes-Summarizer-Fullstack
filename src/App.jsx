@@ -1,0 +1,28 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Layout from "./components/Layout";
+import HomePage from "./pages/HomePage";
+import SettingsPage from "./pages/SettingsPage";
+import { NotesProvider } from "./context/NotesContext";
+import { UIProvider } from "./context/UIContext";
+import { AuthProvider } from "./context/AuthContext";
+
+function App() {
+  return (
+    <AuthProvider>
+      <UIProvider>
+        <NotesProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<HomePage />} />
+                <Route path="settings" element={<SettingsPage />} />
+              </Route>
+            </Routes>
+          </Router>
+        </NotesProvider>
+      </UIProvider>
+    </AuthProvider>
+  );
+}
+
+export default App;
