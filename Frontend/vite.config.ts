@@ -15,4 +15,13 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["lucide-react"],
   },
+  build: {
+    rollupOptions: {
+      external: [
+        "firebase-admin", // if you accidentally imported it in frontend
+        "fs", // Node built-in
+        "path", // Node built-in
+      ],
+    },
+  },
 });
