@@ -1,3 +1,4 @@
+// src/config/firebaseClient.js
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
@@ -11,7 +12,11 @@ const firebaseConfig = {
   measurementId: "G-F84DDJYG12",
 };
 
+// Initialize app only once
 const app =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+
+// Auth instance
 const auth = getAuth(app);
-export default { app, auth };
+
+export { app, auth };
