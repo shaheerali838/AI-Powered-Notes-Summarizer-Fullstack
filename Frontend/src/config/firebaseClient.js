@@ -1,6 +1,5 @@
 // src/config/firebaseClient.js
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDNzDcVZEIeJAA0Q5PaBgX0znhV5D__XMw",
@@ -16,7 +15,4 @@ const firebaseConfig = {
 const app =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Auth instance
-const auth = getAuth(app);
-
-export { app, auth };
+export default app;
