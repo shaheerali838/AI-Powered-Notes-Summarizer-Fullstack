@@ -1,19 +1,19 @@
-import { createContext, useState, useContext, useEffect } from 'react';
-import { 
-  getAuth, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
+import { createContext, useState, useContext, useEffect } from "react";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
   FacebookAuthProvider,
   signOut,
-  onAuthStateChanged 
-} from 'firebase/auth';
-import app from '../config/firebaseClient';
+  onAuthStateChanged,
+} from "firebase/auth";
+import app from "../config/firebaseClient";
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 };
 
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
     } catch (error) {
-      console.error('Google sign in error:', error);
+      console.error("Google sign in error:", error);
       throw error;
     }
   };
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
       const result = await signInWithPopup(auth, facebookProvider);
       return result.user;
     } catch (error) {
-      console.error('Facebook sign in error:', error);
+      console.error("Facebook sign in error:", error);
       throw error;
     }
   };
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
       await signOut(auth);
       setIsGuest(false);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
       throw error;
     }
   };
@@ -84,9 +84,5 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
