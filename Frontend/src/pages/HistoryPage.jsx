@@ -122,7 +122,7 @@ const HistoryPage = () => {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl h-full overflow-auto">
+    <div className="container mx-auto max-w-4xl">
       <div className="flex items-center gap-2 mb-6">
         <Clock className="h-6 w-6 text-blue-600" />
         <h1 className="text-2xl font-semibold text-gray-900">

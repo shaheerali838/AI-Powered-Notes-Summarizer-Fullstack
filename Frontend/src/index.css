@@ -37,21 +37,3 @@
 input, textarea, button {
   transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
 }
-
-/* Ensure proper stacking context */
-.navbar {
-  z-index: 50;
-}
-
-.sidebar {
-  z-index: 30;
-}
-
-.sidebar-overlay {
-  z-index: 40;
-}
-
-/* Prevent content from jumping during sidebar transitions */
-body {
-  overflow-x: hidden;
-}

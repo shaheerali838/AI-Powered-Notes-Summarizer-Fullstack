@@ -20,10 +20,10 @@ const HomePage = () => {
   }, [summaryOutput]);
 
   return (
-    <div className="container mx-auto max-w-6xl h-full">
+    <div className="container mx-auto max-w-6xl">
       {!showResults ? (
         /* Initial Upload State */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">
           {/* Upload Section */}
           <div className="lg:col-span-1 flex flex-col">
             <UploadNotes />
@@ -49,7 +49,7 @@ const HomePage = () => {
         </div>
       ) : (
         /* Post-Generation State */
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-8rem)]">
           {/* Original Notes */}
           <div className="flex flex-col">
             <NotesDisplay />

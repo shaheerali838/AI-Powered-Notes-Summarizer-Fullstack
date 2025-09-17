@@ -68,8 +68,7 @@ const Sidebar = () => {
       {/* Mobile Overlay */}
       {isMobile && showMobileOverlay && (
         <div 
-          className="fixed bg-black bg-opacity-50 z-40"
-          style={{ top: '64px', left: 0, right: 0, bottom: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={() => setShowMobileOverlay(false)}
         />
       )}
@@ -77,13 +76,13 @@ const Sidebar = () => {
       {/* Toggle Button */}
       <button
         onClick={toggleSidebar}
-        className={`fixed z-40 p-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all duration-300 ${
+        className={`fixed top-4 z-50 p-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all duration-300 ${
           isMobile 
-            ? 'left-4 top-20' 
+            ? 'left-4' 
             : sidebarExpanded 
-              ? 'left-60 top-20' 
-              : 'left-12 top-20'
-        } ${!isMobile ? 'hidden' : ''}`}
+              ? 'left-60' 
+              : 'left-12'
+        }`}
         aria-label="Toggle sidebar"
       >
         {sidebarExpanded ? (
@@ -95,16 +94,15 @@ const Sidebar = () => {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed left-0 bg-white border-r border-gray-200 z-30 transition-all duration-300 ease-in-out ${
+        className={`fixed left-0 top-0 h-full bg-white border-r border-gray-200 z-30 transition-all duration-300 ease-in-out ${
           isMobile
             ? `${showMobileOverlay ? 'translate-x-0' : '-translate-x-full'} w-64`
             : sidebarExpanded 
               ? 'w-64 translate-x-0' 
               : 'w-16 translate-x-0'
         }`}
-        style={{ top: '64px', height: 'calc(100vh - 64px)' }}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full pt-16">
           <div className="p-4 space-y-4 flex-1 overflow-y-auto">
             {/* New Summary Button */}
             <Link
