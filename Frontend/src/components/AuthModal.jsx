@@ -7,6 +7,7 @@ const AuthModal = () => {
   const {
     authModalOpen,
     authMode,
+    setAuthMode, // ✅ Added from context
     closeAuthModal,
     signInWithGoogle,
     signInWithFacebook,

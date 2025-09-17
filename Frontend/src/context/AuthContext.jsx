@@ -1,9 +1,6 @@
 // src/context/AuthContext.jsx
 import { createContext, useState, useContext, useEffect } from "react";
 import {
-  GoogleAuthProvider,
-  FacebookAuthProvider,
-  signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -27,112 +24,70 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState("login"); // 'login' or 'signup'
-
-  const googleProvider = new GoogleAuthProvider();
-  const facebookProvider = new FacebookAuthProvider();
+  const [authMode, setAuthMode] = useState("login"); // 'login' | 'signup'
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        setIsGuest(user.isAnonymous);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      try {
+        if (currentUser) {
+          setUser(currentUser);
+          setIsGuest(currentUser.isAnonymous);
 
-        // Create user document if it doesn't exist
-        if (!user.isAnonymous) {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (!userDoc.exists()) {
-            await setDoc(doc(db, "users", user.uid), {
-              email: user.email,
-              displayName: user.displayName,
-              createdAt: new Date(),
-            });
+          // Create user doc if not anonymous
+          if (!currentUser.isAnonymous) {
+            const userRef = doc(db, "users", currentUser.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+              await setDoc(userRef, {
+                email: currentUser.email,
+                displayName: currentUser.displayName || "",
+                createdAt: new Date(),
+              });
+            }
           }
+        } else {
+          setUser(null);
+          setIsGuest(false);
         }
-      } else {
-        setUser(null);
-        setIsGuest(false);
+      } catch (err) {
+        console.error("🔥 Firestore error in AuthContext:", err.message);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
-  const signInWithGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      return result.user;
-    } catch (error) {
-      console.error("Google sign in error:", error);
-      throw error;
-    }
-  };
-
-  const signInWithFacebook = async () => {
-    try {
-      const result = await signInWithPopup(auth, facebookProvider);
-      return result.user;
-    } catch (error) {
-      console.error("Facebook sign in error:", error);
-      throw error;
-    }
-  };
-
   const signInWithEmail = async (email, password) => {
-    try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      return result.user;
-    } catch (error) {
-      console.error("Email sign in error:", error);
-      throw error;
-    }
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result.user;
   };
 
   const signUpWithEmail = async (email, password, displayName) => {
-    try {
-      const result = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(result.user, { displayName });
 
-      // Update profile with display name
-      await updateProfile(result.user, { displayName });
+    // Create Firestore user doc
+    await setDoc(doc(db, "users", result.user.uid), {
+      email,
+      displayName,
+      createdAt: new Date(),
+    });
 
-      // Create user document in Firestore
-      await setDoc(doc(db, "users", result.user.uid), {
-        email,
-        displayName,
-        createdAt: new Date(),
-      });
-
-      return result.user;
-    } catch (error) {
-      console.error("Email sign up error:", error);
-      throw error;
-    }
+    return result.user;
   };
 
   const continueAsGuest = async () => {
-    try {
-      const result = await signInAnonymously(auth);
-      setIsGuest(true);
-      return result.user;
-    } catch (error) {
-      console.error("Guest sign in error:", error);
-      throw error;
-    }
+    const result = await signInAnonymously(auth);
+    setIsGuest(true);
+    return result.user;
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-      setIsGuest(false);
-    } catch (error) {
-      console.error("Logout error:", error);
-      throw error;
-    }
+    await signOut(auth);
+    setIsGuest(false);
   };
 
   const openAuthModal = (mode = "login") => {
@@ -140,9 +95,7 @@ export const AuthProvider = ({ children }) => {
     setAuthModalOpen(true);
   };
 
-  const closeAuthModal = () => {
-    setAuthModalOpen(false);
-  };
+  const closeAuthModal = () => setAuthModalOpen(false);
 
   const value = {
     user,
@@ -150,8 +103,6 @@ export const AuthProvider = ({ children }) => {
     isGuest,
     authModalOpen,
     authMode,
-    signInWithGoogle,
-    signInWithFacebook,
     signInWithEmail,
     signUpWithEmail,
     continueAsGuest,
