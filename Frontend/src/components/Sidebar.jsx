@@ -12,10 +12,12 @@ import {
 } from "lucide-react";
 import { useNotes } from "../context/NotesContext";
 import { useUI } from "../context/UIContext";
+import { useAuth } from "../context/AuthContext";
 import { useState, useEffect } from "react";
 
 const Sidebar = () => {
   const { clearNotes, summaryHistory, fetchHistory } = useNotes();
+  const { isAuthenticated, isGuest } = useAuth();
   const { 
     sidebarExpanded, 
     toggleSidebar, 
@@ -146,8 +148,17 @@ const Sidebar = () => {
               {/* History Items */}
               {historyExpanded && (sidebarExpanded || isMobile) && (
                 <div className="ml-4 space-y-1 max-h-64 overflow-y-auto">
-                  {summaryHistory.length === 0 ? (
-                    <p className="text-sm text-gray-500 px-4 py-2">No history yet</p>
+                  {!isAuthenticated && !isGuest ? (
+                    <div className="px-4 py-3 text-center">
+                      <p className="text-sm text-gray-500 mb-2">Sign in to view history</p>
+                      <button className="text-xs text-blue-600 hover:text-blue-800">
+                        Sign In
+                      </button>
+                    </div>
+                  ) : summaryHistory.length === 0 ? (
+                    <p className="text-sm text-gray-500 px-4 py-2">
+                      {isAuthenticated ? "No summaries yet" : "No history yet"}
+                    </p>
                   ) : (
                     summaryHistory.slice(0, 10).map((item) => (
                       <Link

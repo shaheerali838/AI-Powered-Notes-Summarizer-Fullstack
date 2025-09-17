@@ -1,4 +1,5 @@
 import { createContext, useState, useContext } from "react";
+import { useAuth } from "./AuthContext";
 
 const NotesContext = createContext();
 
@@ -9,6 +10,7 @@ export const useNotes = () => {
 };
 
 export const NotesProvider = ({ children }) => {
+  const { isAuthenticated, user } = useAuth();
   const [originalNotes, setOriginalNotes] = useState("");
   const [summaryOutput, setSummaryOutput] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -29,9 +31,16 @@ export const NotesProvider = ({ children }) => {
     setError("");
 
     try {
+      const headers = { "Content-Type": "application/json" };
+      
+      // Add auth header for authenticated users
+      if (isAuthenticated && user) {
+        headers['Authorization'] = `Bearer ${await user.getIdToken()}`;
+      }
+      
       const response = await fetch(`${API_URL}/api/summarize`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ text: originalNotes }),
       });
 
@@ -75,8 +84,18 @@ export const NotesProvider = ({ children }) => {
 
   // Fetch history from backend
   const fetchHistory = async () => {
+    // Don't fetch history for unauthenticated users
+    if (!isAuthenticated) {
+      setSummaryHistory([]);
+      return;
+    }
+    
     try {
-      const response = await fetch(`${API_URL}/api/history`);
+      const response = await fetch(`${API_URL}/api/history`, {
+        headers: {
+          'Authorization': `Bearer ${await user?.getIdToken()}`,
+        },
+      });
       if (!response.ok) throw new Error("Failed to fetch history");
       const data = await response.json();
 
@@ -96,9 +115,14 @@ export const NotesProvider = ({ children }) => {
   };
 
   const deleteSummary = async (id) => {
+    if (!isAuthenticated) return;
+    
     try {
       const response = await fetch(`${API_URL}/api/summary/${id}`, {
         method: "DELETE",
+        headers: {
+          'Authorization': `Bearer ${await user?.getIdToken()}`,
+        },
       });
       if (!response.ok) throw new Error("Failed to delete summary");
       setSummaryHistory((prev) =>
