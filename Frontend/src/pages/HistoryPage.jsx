@@ -1,3 +1,4 @@
+// src/pages/HistoryPage.jsx
 import { useEffect, useState } from "react";
 import { Clock, ArrowRight, Trash2, Lock, User } from "lucide-react";
 import { useNotes } from "../context/NotesContext";
@@ -5,16 +6,18 @@ import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 
 const HistoryPage = () => {
-  const { summaryHistory, deleteSummary, loadSummary, fetchHistory } = useNotes();
+  const { summaryHistory, deleteSummary, loadSummary, fetchHistory } =
+    useNotes();
   const { user, isGuest, openAuthModal } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     document.title = "AI Notes Summarizer - History";
-    if (user) {
+    if (user || isGuest) {
       fetchHistory();
+      setLoading(false);
     }
-  }, []);
+  }, [user, isGuest]);
 
   const handleViewSummary = (summaryItem) => {
     loadSummary(summaryItem);
@@ -22,22 +25,8 @@ const HistoryPage = () => {
 
   const formatDate = (timestamp) => {
     if (!timestamp) return "Unknown date";
-
-    // If it's a Firestore Timestamp object
-    if (timestamp.toDate) {
-      return new Intl.DateTimeFormat("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "numeric",
-      }).format(timestamp.toDate());
-    }
-
-    // If it's already a JS Date string/number
-    const date = new Date(timestamp);
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     if (isNaN(date)) return "Invalid date";
-
     return new Intl.DateTimeFormat("en-US", {
       month: "short",
       day: "numeric",
@@ -47,7 +36,6 @@ const HistoryPage = () => {
     }).format(date);
   };
 
-  // Show authentication prompt for non-authenticated users
   if (!user) {
     return (
       <div className="container mx-auto max-w-4xl">
@@ -59,12 +47,14 @@ const HistoryPage = () => {
         </div>
         <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm text-center">
           <Lock className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign In Required</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Sign In Required
+          </h2>
           <p className="text-gray-600 mb-6">
             Sign in to view and manage your summary history
           </p>
           <button
-            onClick={() => openAuthModal('login')}
+            onClick={() => openAuthModal("login")}
             className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Sign In
@@ -77,15 +67,7 @@ const HistoryPage = () => {
   if (loading) {
     return (
       <div className="container mx-auto max-w-4xl">
-        <div className="flex items-center gap-2 mb-6">
-          <Clock className="h-6 w-6 text-blue-600" />
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Summary History
-          </h1>
-        </div>
-        <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm text-center">
-          <p className="text-gray-600">Loading history...</p>
-        </div>
+        <p className="text-gray-600 text-center py-8">Loading history...</p>
       </div>
     );
   }
@@ -99,7 +81,6 @@ const HistoryPage = () => {
         </h1>
       </div>
 
-      {/* Guest Mode Warning */}
       {isGuest && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
           <div className="flex items-center gap-2 mb-2">
@@ -107,11 +88,11 @@ const HistoryPage = () => {
             <h3 className="font-medium text-yellow-800">Guest Mode</h3>
           </div>
           <p className="text-sm text-yellow-700 mb-3">
-            Your history is temporary and will be cleared when you close the browser.
-            Sign in to save your summaries permanently.
+            Your history is temporary. Sign in to save your summaries
+            permanently.
           </p>
           <button
-            onClick={() => openAuthModal('login')}
+            onClick={() => openAuthModal("login")}
             className="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded hover:bg-yellow-200 transition-colors"
           >
             Sign In Now
@@ -141,15 +122,20 @@ const HistoryPage = () => {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="font-medium text-gray-900">
-                    {(item.originalContent || item.original)
-                      ? (item.originalContent || item.original).substring(0, 50) +
-                        ((item.originalContent || item.original).length > 50 ? "..." : "")
+                    {item.originalContent || item.original
+                      ? (item.originalContent || item.original).substring(
+                          0,
+                          50
+                        ) +
+                        ((item.originalContent || item.original).length > 50
+                          ? "..."
+                          : "")
                       : "No original notes available"}
                   </h3>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <span>{formatDate(item.createdAt || item.timestamp)}</span>
                     {item.wordCount && <span>• {item.wordCount} words</span>}
-                    {item.fileType && item.fileType !== 'text' && (
+                    {item.fileType && item.fileType !== "text" && (
                       <span>• {item.fileType.toUpperCase()}</span>
                     )}
                   </div>
@@ -175,7 +161,9 @@ const HistoryPage = () => {
               </div>
 
               <div className="text-sm text-gray-700 line-clamp-2">
-                {item.summarizedContent || item.summary || "No summary available"}
+                {item.summarizedContent ||
+                  item.summary ||
+                  "No summary available"}
               </div>
             </div>
           ))}

@@ -5,7 +5,6 @@ import {
   collection,
   addDoc,
   query,
-  where,
   orderBy,
   onSnapshot,
   doc,
@@ -17,9 +16,7 @@ const NotesContext = createContext();
 
 export const useNotes = () => {
   const context = useContext(NotesContext);
-  if (!context) {
-    throw new Error("useNotes must be used within NotesProvider");
-  }
+  if (!context) throw new Error("useNotes must be used within NotesProvider");
   return context;
 };
 
@@ -35,7 +32,7 @@ export const NotesProvider = ({ children }) => {
     import.meta.env.VITE_APP_API_URL ||
     "https://ai-powered-notes-summarizer-backend.vercel.app";
 
-  // Save summary to Firestore for authenticated users
+  // Save summary to Firestore
   const saveSummaryToFirestore = async (summaryData) => {
     if (!user || isGuest) return null;
 
@@ -55,7 +52,7 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Save summary to sessionStorage for guests
+  // Save summary to sessionStorage (guest)
   const saveSummaryToSessionStorage = (summaryData) => {
     try {
       const guestSummaries = JSON.parse(
@@ -77,7 +74,7 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Fetch history from Firestore for authenticated users
+  // Fetch history (Firestore)
   const fetchHistoryFromFirestore = () => {
     if (!user || isGuest || authLoading) return;
 
@@ -87,7 +84,6 @@ export const NotesProvider = ({ children }) => {
         orderBy("createdAt", "desc")
       );
 
-      // Return the unsubscribe function
       const unsubscribe = onSnapshot(
         q,
         (querySnapshot) => {
@@ -98,7 +94,7 @@ export const NotesProvider = ({ children }) => {
           setSummaryHistory(history);
         },
         (error) => {
-          console.error("Error fetching history from Firestore:", error);
+          console.error("Error fetching history:", error);
           setError("Failed to load history");
         }
       );
@@ -110,7 +106,7 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Fetch history from sessionStorage for guests
+  // Fetch history (sessionStorage)
   const fetchHistoryFromSessionStorage = () => {
     try {
       const guestSummaries = JSON.parse(
@@ -123,7 +119,16 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Generate summary (no changes needed)
+  // Fetch history based on user type
+  const fetchHistory = () => {
+    if (authLoading) return;
+
+    if (user && !isGuest) return fetchHistoryFromFirestore();
+    if (isGuest) fetchHistoryFromSessionStorage();
+    else setSummaryHistory([]);
+  };
+
+  // Generate summary
   const generateSummary = async () => {
     if (!originalNotes.trim()) {
       setError("Please enter some text to summarize");
@@ -171,11 +176,14 @@ export const NotesProvider = ({ children }) => {
         original: data.original,
       });
 
-      if (user && !isGuest) {
-        await saveSummaryToFirestore(summaryData);
-      } else {
-        saveSummaryToSessionStorage(summaryData);
-        fetchHistoryFromSessionStorage();
+      try {
+        if (user && !isGuest) await saveSummaryToFirestore(summaryData);
+        else {
+          saveSummaryToSessionStorage(summaryData);
+          fetchHistoryFromSessionStorage();
+        }
+      } catch (saveError) {
+        console.error("Failed to save summary:", saveError);
       }
     } catch (err) {
       setError(err.message);
@@ -185,15 +193,7 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Fetch history based on user type
-  const fetchHistory = () => {
-    if (authLoading) return;
-    if (user && !isGuest) return fetchHistoryFromFirestore();
-    if (isGuest) fetchHistoryFromSessionStorage();
-    if (!user) setSummaryHistory([]);
-  };
-
-  // Delete summary (no changes)
+  // Delete summary
   const deleteSummary = async (id) => {
     try {
       if (user && !isGuest) {
@@ -217,7 +217,7 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Load summary (no changes)
+  // Load summary
   const loadSummary = (summaryItem) => {
     setOriginalNotes(summaryItem.originalContent || summaryItem.original || "");
     setSummaryOutput({
@@ -234,18 +234,12 @@ export const NotesProvider = ({ children }) => {
     setError("");
   };
 
-  // Effect to fetch history when auth state changes (fixed unsubscribe)
   useEffect(() => {
     if (authLoading) return;
 
     let unsubscribe;
-    if (user && !isGuest) {
-      unsubscribe = fetchHistoryFromFirestore();
-    } else if (isGuest) {
-      fetchHistoryFromSessionStorage();
-    } else {
-      setSummaryHistory([]);
-    }
+    if (user && !isGuest) unsubscribe = fetchHistory();
+    else fetchHistory();
 
     return () => {
       if (unsubscribe) unsubscribe();
