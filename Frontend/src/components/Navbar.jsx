@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import AuthModal from "./AuthModal";
 
 const Navbar = () => {
-  const { user, isGuest, logout, openAuthModal, isAuthenticated } = useAuth();
+  const { user, isGuest, logout, openAuthModal, isAuthenticated, loading } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -14,6 +14,23 @@ const Navbar = () => {
       console.error("Failed to log out:", error);
     }
   };
+
+  if (loading) {
+    return (
+      <nav className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between h-16">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-xl font-semibold text-gray-900"
+          >
+            <Brain className="h-6 w-6 text-[#4F88FF]" />
+            <span>AI Notes Summarizer</span>
+          </Link>
+        </div>
+        <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+      </nav>
+    );
+  }
 
   return (
     <>
@@ -43,14 +60,23 @@ const Navbar = () => {
                     <img
                       src={user.photoURL}
                       alt="Profile"
-                      className="h-8 w-8 rounded-full"
+                      className="h-8 w-8 rounded-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
                     />
                   ) : (
                     <User className="h-5 w-5 text-gray-600" />
                   )}
+                  {user?.photoURL && (
+                    <div className="h-8 w-8 rounded-full bg-gray-200 items-center justify-center" style={{display: 'none'}}>
+                      <User className="h-5 w-5 text-gray-600" />
+                    </div>
+                  )}
                 </div>
                 <span className="text-sm text-gray-700 hidden md:inline">
-                  {isGuest ? "Guest" : user.displayName || user.email}
+                  {isGuest ? "Guest" : user?.displayName || user?.email || "User"}
                 </span>
               </div>
               <button
