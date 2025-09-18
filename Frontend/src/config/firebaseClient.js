@@ -1,6 +1,10 @@
 // src/config/firebaseClient.js
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider, FacebookAuthProvider } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -23,11 +27,11 @@ export const googleProvider = new GoogleAuthProvider();
 export const facebookProvider = new FacebookAuthProvider();
 
 // Configure Google provider
-googleProvider.addScope('profile');
-googleProvider.addScope('email');
+googleProvider.addScope("profile");
+googleProvider.addScope("email");
 
 // Configure Facebook provider
-facebookProvider.addScope('email');
-facebookProvider.addScope('public_profile');
+facebookProvider.addScope("email");
+facebookProvider.addScope("public_profile");
 
 export default app;
