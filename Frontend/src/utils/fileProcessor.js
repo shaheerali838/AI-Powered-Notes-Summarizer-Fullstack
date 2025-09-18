@@ -45,13 +45,17 @@ export const processFile = async (file, onProgress = () => {}) => {
     onProgress(10);
 
     if (SUPPORTED_FILE_TYPES.text.includes(extension)) {
-      return await processTextFile(file, onProgress);
+      const text = await processTextFile(file, onProgress);
+      return { text, fileType: 'text' };
     } else if (SUPPORTED_FILE_TYPES.pdf.includes(extension)) {
-      return await processPdfFile(file, onProgress);
+      const text = await processPdfFile(file, onProgress);
+      return { text, fileType: 'pdf' };
     } else if (SUPPORTED_FILE_TYPES.image.includes(extension)) {
-      return await processImageFile(file, onProgress); // now calls backend API
+      const text = await processImageFile(file, onProgress);
+      return { text, fileType: 'image' };
     } else if (SUPPORTED_FILE_TYPES.document.includes(extension)) {
-      return await processDocxFile(file, onProgress);
+      const text = await processDocxFile(file, onProgress);
+      return { text, fileType: 'document' };
     }
 
     throw new Error(`Unsupported file type: ${extension}`);

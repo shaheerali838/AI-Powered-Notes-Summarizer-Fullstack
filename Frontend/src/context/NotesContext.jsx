@@ -36,10 +36,10 @@ export const NotesProvider = ({ children }) => {
   // Save summary to Firestore for authenticated users
   const saveSummaryToFirestore = async (summaryData) => {
     try {
-      const docRef = await addDoc(collection(db, "summaries"), {
-        userId: user.uid,
+      const docRef = await addDoc(collection(db, "users", user.uid, "summaries"), {
         ...summaryData,
-        timestamp: new Date(),
+        createdAt: new Date(),
+        fileType: summaryData.fileType || "text",
       });
       return docRef.id;
     } catch (error) {
@@ -56,21 +56,25 @@ export const NotesProvider = ({ children }) => {
     const newSummary = {
       id: Date.now().toString(),
       ...summaryData,
-      timestamp: new Date(),
+      createdAt: new Date(),
+      fileType: summaryData.fileType || "text",
     };
     guestSummaries.unshift(newSummary);
+    // Keep only last 10 summaries for guests
+    if (guestSummaries.length > 10) {
+      guestSummaries.splice(10);
+    }
     sessionStorage.setItem("guestSummaries", JSON.stringify(guestSummaries));
     return newSummary.id;
   };
 
   // Fetch history from Firestore for authenticated users
   const fetchHistoryFromFirestore = () => {
-    if (!user) return;
+    if (!user || isGuest) return;
 
     const q = query(
-      collection(db, "summaries"),
-      where("userId", "==", user.uid),
-      orderBy("timestamp", "desc")
+      collection(db, "users", user.uid, "summaries"),
+      orderBy("createdAt", "desc")
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -79,6 +83,9 @@ export const NotesProvider = ({ children }) => {
         history.push({ id: doc.id, ...doc.data() });
       });
       setSummaryHistory(history);
+    }, (error) => {
+      console.error("Error fetching history from Firestore:", error);
+      setError("Failed to load history");
     });
 
     return unsubscribe;
@@ -122,9 +129,10 @@ export const NotesProvider = ({ children }) => {
 
       // data: { original, summary, keyPoints }
       const summaryData = {
-        original: data.original,
-        summary: data.summary,
+        originalContent: data.original,
+        summarizedContent: data.summary,
         keyPoints: data.keyPoints || [],
+        wordCount: data.original ? data.original.split(' ').length : 0,
       };
 
       setSummaryOutput({
@@ -142,30 +150,12 @@ export const NotesProvider = ({ children }) => {
         summaryId = saveSummaryToSessionStorage(summaryData);
       }
 
-      // Add to local state
-      addToHistory({
-        id: summaryId,
-        ...summaryData,
-        date: new Date(),
-      });
     } catch (err) {
       setError(err.message);
       console.error("API Error:", err);
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  // Add summary to local history state
-  const addToHistory = ({ id, original, summary, keyPoints, date }) => {
-    const newSummary = {
-      id: id.toString(),
-      original,
-      summary,
-      keyPoints,
-      date,
-    };
-    setSummaryHistory((prev) => [newSummary, ...prev]);
   };
 
   // Fetch history based on user type
@@ -184,7 +174,7 @@ export const NotesProvider = ({ children }) => {
     if (user && !isGuest) {
       // Delete from Firestore
       try {
-        await deleteDoc(doc(db, "summaries", id));
+        await deleteDoc(doc(db, "users", user.uid, "summaries", id));
         // The onSnapshot listener will update the history
       } catch (err) {
         setError(err.message);
@@ -202,6 +192,17 @@ export const NotesProvider = ({ children }) => {
       );
       setSummaryHistory(updatedSummaries);
     }
+  };
+
+  // Load a specific summary from history
+  const loadSummary = (summaryItem) => {
+    setOriginalNotes(summaryItem.originalContent || summaryItem.original || "");
+    setSummaryOutput({
+      summary: summaryItem.summarizedContent || summaryItem.summary,
+      keyPoints: summaryItem.keyPoints || [],
+      original: summaryItem.originalContent || summaryItem.original,
+    });
+    setError("");
   };
 
   const clearNotes = () => {
@@ -239,6 +240,7 @@ export const NotesProvider = ({ children }) => {
         generateSummary,
         fetchHistory,
         deleteSummary,
+        loadSummary,
         clearNotes,
       }}
     >

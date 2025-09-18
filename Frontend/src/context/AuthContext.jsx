@@ -3,13 +3,14 @@ import { createContext, useState, useContext, useEffect } from "react";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
   signInAnonymously,
   updateProfile,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { auth, db } from "../config/firebaseClient";
+import { auth, db, googleProvider, facebookProvider } from "../config/firebaseClient";
 
 const AuthContext = createContext();
 
@@ -79,6 +80,56 @@ export const AuthProvider = ({ children }) => {
     return result.user;
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      
+      // Create user document if it doesn't exist
+      const userRef = doc(db, "users", result.user.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          email: result.user.email,
+          displayName: result.user.displayName,
+          photoURL: result.user.photoURL,
+          provider: 'google',
+          createdAt: new Date(),
+        });
+      }
+      
+      return result.user;
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      throw new Error("Failed to sign in with Google");
+    }
+  };
+
+  const signInWithFacebook = async () => {
+    try {
+      const result = await signInWithPopup(auth, facebookProvider);
+      
+      // Create user document if it doesn't exist
+      const userRef = doc(db, "users", result.user.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          email: result.user.email,
+          displayName: result.user.displayName,
+          photoURL: result.user.photoURL,
+          provider: 'facebook',
+          createdAt: new Date(),
+        });
+      }
+      
+      return result.user;
+    } catch (error) {
+      console.error("Facebook sign-in error:", error);
+      throw new Error("Failed to sign in with Facebook");
+    }
+  };
+
   const continueAsGuest = async () => {
     const result = await signInAnonymously(auth);
     setIsGuest(true);
@@ -97,14 +148,21 @@ export const AuthProvider = ({ children }) => {
 
   const closeAuthModal = () => setAuthModalOpen(false);
 
+  const setAuthMode = (mode) => {
+    setAuthMode(mode);
+  };
+
   const value = {
     user,
     loading,
     isGuest,
     authModalOpen,
     authMode,
+    setAuthMode,
     signInWithEmail,
     signUpWithEmail,
+    signInWithGoogle,
+    signInWithFacebook,
     continueAsGuest,
     logout,
     openAuthModal,
