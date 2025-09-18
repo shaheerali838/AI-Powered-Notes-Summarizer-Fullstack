@@ -1,15 +1,21 @@
 // src/pages/HistoryPage.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Clock, ArrowRight, Trash2, Lock, User } from "lucide-react";
 import { useNotes } from "../context/NotesContext";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 
 const HistoryPage = () => {
-  const { summaryHistory, deleteSummary, loadSummary, fetchHistory } =
-    useNotes();
+  const {
+    summaryHistory,
+    deleteSummary,
+    loadSummary,
+    fetchHistory,
+    selectedSummary,
+  } = useNotes();
   const { user, isGuest, openAuthModal } = useAuth();
   const [loading, setLoading] = useState(true);
+  const summaryRefs = useRef({}); // store refs for each summary item
 
   useEffect(() => {
     document.title = "AI Notes Summarizer - History";
@@ -18,6 +24,16 @@ const HistoryPage = () => {
       setLoading(false);
     }
   }, [user, isGuest]);
+
+  // Scroll to selected summary when it changes
+  useEffect(() => {
+    if (selectedSummary && summaryRefs.current[selectedSummary.id]) {
+      summaryRefs.current[selectedSummary.id].scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [selectedSummary]);
 
   const handleViewSummary = (summaryItem) => {
     loadSummary(summaryItem);
@@ -117,7 +133,12 @@ const HistoryPage = () => {
           {summaryHistory.map((item) => (
             <div
               key={item.id}
-              className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm"
+              ref={(el) => (summaryRefs.current[item.id] = el)}
+              className={`bg-white p-6 rounded-lg border transition-shadow ${
+                selectedSummary?.id === item.id
+                  ? "border-blue-500 shadow-md"
+                  : "border-gray-200 shadow-sm"
+              }`}
             >
               <div className="flex justify-between items-start mb-4">
                 <div>

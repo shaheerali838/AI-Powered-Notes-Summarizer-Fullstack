@@ -1,4 +1,3 @@
-// src/components/Sidebar.jsx
 import { Link, useLocation } from "react-router-dom";
 import {
   PlusCircle,
@@ -10,6 +9,9 @@ import {
   FileText,
   Lock,
   User,
+  Brain,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { useNotes } from "../context/NotesContext";
 import { useUI } from "../context/UIContext";
@@ -27,108 +29,124 @@ const Sidebar = () => {
   } = useUI();
   const { isGuest, openAuthModal } = useAuth();
   const location = useLocation();
-  const [showMobileOverlay, setShowMobileOverlay] = useState(false);
-
-  const handleNewSummary = () => {
-    clearNotes();
-    if (isMobile) {
-      setShowMobileOverlay(false);
-    }
-  };
-
-  const handleHistoryItemClick = (summaryItem) => {
-    loadSummary(summaryItem);
-    if (isMobile) {
-      setShowMobileOverlay(false);
-    }
-  };
-
-  const handleSignInPrompt = () => {
-    openAuthModal('login');
-  };
+  const [mobileOverlayOpen, setMobileOverlayOpen] = useState(false);
 
   useEffect(() => {
     fetchHistory();
   }, []);
 
   useEffect(() => {
-    if (isMobile && sidebarExpanded) {
-      setShowMobileOverlay(true);
-    } else {
-      setShowMobileOverlay(false);
-    }
+    setMobileOverlayOpen(isMobile && sidebarExpanded);
   }, [sidebarExpanded, isMobile]);
 
+  const handleNewSummary = () => {
+    clearNotes();
+    if (isMobile) setMobileOverlayOpen(false);
+  };
+
+  const handleHistoryItemClick = (item) => {
+    loadSummary(item); // load the summary into main page
+    if (isMobile) setMobileOverlayOpen(false);
+  };
+
+  const handleSignInPrompt = () => openAuthModal("login");
+
   const formatDate = (date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(new Date(date));
+    try {
+      const d = date?.toDate ? date.toDate() : new Date(date);
+      if (isNaN(d)) return "Invalid date";
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+      }).format(d);
+    } catch {
+      return "Invalid date";
+    }
   };
 
   return (
     <>
-      {/* Mobile Overlay */}
-      {isMobile && showMobileOverlay && (
+      {/* Mobile overlay */}
+      {isMobile && mobileOverlayOpen && (
         <div
-          className="fixed bg-black bg-opacity-50 z-40"
-          style={{ top: "64px", left: 0, right: 0, bottom: 0 }}
-          onClick={() => setShowMobileOverlay(false)}
+          className="fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setMobileOverlayOpen(false)}
         />
       )}
 
-      {/* Toggle Button */}
-      <button
-        onClick={toggleSidebar}
-        className={`fixed z-40 p-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all duration-300 ${
-          isMobile
-            ? "left-4 top-20"
-            : sidebarExpanded
-            ? "left-60 top-20"
-            : "left-12 top-20"
-        } ${!isMobile ? "hidden" : ""}`}
-        aria-label="Toggle sidebar"
-      >
-        {sidebarExpanded ? (
-          <X className="h-5 w-5 text-gray-600" />
-        ) : (
-          <Menu className="h-5 w-5 text-gray-600" />
-        )}
-      </button>
-
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 bg-white border-r border-gray-200 z-30 transition-all duration-300 ease-in-out ${
+        className={`fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-transform duration-300 ease-in-out ${
           isMobile
             ? `${
-                showMobileOverlay ? "translate-x-0" : "-translate-x-full"
+                mobileOverlayOpen ? "translate-x-0" : "-translate-x-full"
               } w-64`
             : sidebarExpanded
             ? "w-64 translate-x-0"
             : "w-16 translate-x-0"
         }`}
-        style={{ top: "64px", height: "calc(100vh - 64px)" }}
       >
         <div className="flex flex-col h-full">
-          <div className="p-4 space-y-4 flex-1 overflow-y-auto">
-            {/* New Summary Button */}
+          {/* Header: Logo + Hamburger/Expand */}
+          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
             <Link
               to="/"
               onClick={handleNewSummary}
-              className={`flex items-center gap-3 w-full px-4 py-3 text-white bg-[#4F88FF] rounded-lg hover:bg-[#3B7BFF] transition-all duration-200 transform hover:scale-105 shadow-md ${
-                !sidebarExpanded && !isMobile ? "justify-center" : ""
-              }`}
-              title={!sidebarExpanded && !isMobile ? "New Summary" : ""}
+              className="flex items-center gap-2 text-lg font-semibold text-gray-900"
             >
-              <PlusCircle className="h-5 w-5 flex-shrink-0" />
-              {(sidebarExpanded || isMobile) && (
-                <span className="font-medium">New Summary</span>
-              )}
+              <Brain className="h-6 w-6 text-[#4F88FF]" />
+              {(sidebarExpanded || isMobile) && <span>AI Notes</span>}
             </Link>
 
-            {/* History Section */}
+            <div className="flex items-center gap-2">
+              {/* Mobile Hamburger */}
+              {isMobile && (
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                >
+                  {sidebarExpanded ? (
+                    <X className="h-5 w-5" />
+                  ) : (
+                    <Menu className="h-5 w-5" />
+                  )}
+                </button>
+              )}
+
+              {/* Desktop Expand/Collapse */}
+              {!isMobile && (
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                  title={sidebarExpanded ? "Collapse" : "Expand"}
+                >
+                  {sidebarExpanded ? (
+                    <ChevronsLeft className="h-5 w-5" />
+                  ) : (
+                    <ChevronsRight className="h-5 w-5" />
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Sidebar content */}
+          <div className="p-4 flex-1 space-y-4 overflow-y-auto">
+            {/* New Summary */}
+            <Link
+              to="/"
+              onClick={handleNewSummary}
+              className={`flex items-center gap-3 w-full px-4 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-md ${
+                !sidebarExpanded && !isMobile ? "justify-center" : ""
+              }`}
+            >
+              <PlusCircle className="h-5 w-5 flex-shrink-0" />
+              {(sidebarExpanded || isMobile) && <span>New Summary</span>}
+            </Link>
+
+            {/* History */}
             <div className="space-y-2">
               <button
                 onClick={toggleHistory}
@@ -137,13 +155,10 @@ const Sidebar = () => {
                     ? "justify-center"
                     : "justify-between"
                 }`}
-                title={!sidebarExpanded && !isMobile ? "History" : ""}
               >
                 <div className="flex items-center gap-3">
                   <History className="h-5 w-5 flex-shrink-0" />
-                  {(sidebarExpanded || isMobile) && (
-                    <span className="font-medium">History</span>
-                  )}
+                  {(sidebarExpanded || isMobile) && <span>History</span>}
                 </div>
                 {(sidebarExpanded || isMobile) && (
                   <ChevronDown
@@ -158,35 +173,27 @@ const Sidebar = () => {
               {historyExpanded && (sidebarExpanded || isMobile) && (
                 <div className="ml-4 space-y-1 max-h-64 overflow-y-auto">
                   {summaryHistory.length === 0 ? (
-                    <div className="px-4 py-2">
+                    <div className="px-4 py-2 text-sm text-gray-500">
                       {isGuest ? (
                         <div className="text-center">
-                          <Lock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-xs text-gray-500 mb-2">
-                            Sign in to save your summaries permanently
-                          </p>
+                          <Lock className="h-6 w-6 text-gray-400 mx-auto mb-1" />
+                          Sign in to save summaries
                           <button
                             onClick={handleSignInPrompt}
-                            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium block mt-1"
                           >
                             Sign In
                           </button>
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500">No summaries yet</p>
+                        <p>No summaries yet</p>
                       )}
                     </div>
                   ) : (
                     <>
                       {isGuest && (
-                        <div className="px-4 py-2 mb-2 bg-yellow-50 rounded-lg border border-yellow-200">
-                          <div className="flex items-center gap-1 mb-1">
-                            <User className="h-3 w-3 text-yellow-600" />
-                            <span className="text-xs font-medium text-yellow-800">Guest Mode</span>
-                          </div>
-                          <p className="text-xs text-yellow-700">
-                            History cleared on refresh
-                          </p>
+                        <div className="px-4 py-2 mb-2 bg-yellow-50 rounded-lg border border-yellow-200 text-xs text-yellow-700">
+                          Guest Mode - history cleared on refresh
                         </div>
                       )}
                       {summaryHistory.slice(0, 10).map((item) => (
@@ -199,18 +206,16 @@ const Sidebar = () => {
                             <FileText className="h-4 w-4 mt-0.5 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="truncate">
-                                {(item.originalContent || item.original)
-                                  ? (item.originalContent || item.original).substring(0, 30) + "..."
+                                {item.originalContent || item.original
+                                  ? (
+                                      item.originalContent || item.original
+                                    ).substring(0, 30) + "..."
                                   : "Summary"}
                               </p>
-                              <div className="flex items-center gap-2 text-xs text-gray-400">
-                                <span>{formatDate(item.createdAt || item.timestamp)}</span>
-                                {item.wordCount && (
-                                  <span>• {item.wordCount} words</span>
-                                )}
-                                {item.fileType && item.fileType !== 'text' && (
-                                  <span>• {item.fileType.toUpperCase()}</span>
-                                )}
+                              <div className="flex items-center gap-1 text-xs text-gray-400">
+                                <span>
+                                  {formatDate(item.createdAt || item.timestamp)}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -222,23 +227,7 @@ const Sidebar = () => {
               )}
             </div>
 
-            {/* Quick Stats for authenticated users */}
-            {!isGuest && summaryHistory.length > 0 && (sidebarExpanded || isMobile) && (
-              <div className="px-4 py-2 bg-blue-50 rounded-lg">
-                <p className="text-xs font-medium text-blue-800 mb-1">Your Stats</p>
-                <div className="text-xs text-blue-600 space-y-1">
-                  <div>{summaryHistory.length} summaries</div>
-                  <div>
-                    {summaryHistory.reduce((acc, item) => acc + (item.wordCount || 0), 0)} words processed
-                  </div>
-                  <div>
-                    Joined {new Date(summaryHistory[summaryHistory.length - 1]?.createdAt?.toDate?.() || Date.now()).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Settings Link */}
+            {/* Settings */}
             <SidebarLink
               to="/settings"
               icon={<Settings className="h-5 w-5" />}
@@ -258,13 +247,12 @@ const SidebarLink = ({ to, icon, label, expanded, isActive }) => (
     to={to}
     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
       isActive
-        ? "text-[#4F88FF] bg-blue-50"
+        ? "text-blue-600 bg-blue-50"
         : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
     } ${!expanded ? "justify-center" : ""}`}
-    title={!expanded ? label : ""}
   >
     {icon}
-    {expanded && <span className="font-medium">{label}</span>}
+    {expanded && <span>{label}</span>}
   </Link>
 );
 

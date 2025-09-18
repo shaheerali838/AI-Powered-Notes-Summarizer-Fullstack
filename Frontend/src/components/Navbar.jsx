@@ -5,7 +5,8 @@ import { useAuth } from "../context/AuthContext";
 import AuthModal from "./AuthModal";
 
 const Navbar = () => {
-  const { user, isGuest, logout, openAuthModal, isAuthenticated, loading } = useAuth();
+  const { user, isGuest, logout, openAuthModal, isAuthenticated, loading } =
+    useAuth();
 
   const handleLogout = async () => {
     try {
@@ -62,21 +63,26 @@ const Navbar = () => {
                       alt="Profile"
                       className="h-8 w-8 rounded-full object-cover"
                       onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
+                        e.target.style.display = "none";
+                        e.target.nextSibling.style.display = "flex";
                       }}
                     />
                   ) : (
                     <User className="h-5 w-5 text-gray-600" />
                   )}
                   {user?.photoURL && (
-                    <div className="h-8 w-8 rounded-full bg-gray-200 items-center justify-center" style={{display: 'none'}}>
+                    <div
+                      className="h-8 w-8 rounded-full bg-gray-200 items-center justify-center"
+                      style={{ display: "none" }}
+                    >
                       <User className="h-5 w-5 text-gray-600" />
                     </div>
                   )}
                 </div>
                 <span className="text-sm text-gray-700 hidden md:inline">
-                  {isGuest ? "Guest" : user?.displayName || user?.email || "User"}
+                  {isGuest
+                    ? "Guest"
+                    : user?.displayName || user?.email || "User"}
                 </span>
               </div>
               <button
