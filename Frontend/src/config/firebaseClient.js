@@ -16,20 +16,27 @@ const firebaseConfig = {
   appId: "1:696698406364:web:0966bce6c1b80dd0f87b19",
 };
 
-// Initialize Firebase
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+// Initialize Firebase only once
+let app;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
 
 // Firebase services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Providers
+// Providers with proper configuration
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope("profile");
-googleProvider.addScope("email");
+googleProvider.setCustomParameters({
+  prompt: "select_account",
+});
 
 export const facebookProvider = new FacebookAuthProvider();
-facebookProvider.addScope("email");
-facebookProvider.addScope("public_profile");
+facebookProvider.setCustomParameters({
+  display: "popup",
+});
 
 export default app;
