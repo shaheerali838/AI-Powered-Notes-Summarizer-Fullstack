@@ -37,9 +37,9 @@ const UploadNotes = () => {
       
       // Process files
       if (files.length === 1) {
-        const text = await processFile(files[0], setProcessingProgress);
-        setTextValue(text);
-        setOriginalNotes(text);
+        const result = await processFile(files[0], setProcessingProgress);
+        setTextValue(result.text);
+        setOriginalNotes(result.text);
       } else {
         const results = await processMultipleFiles(files, setProcessingProgress);
         const successfulResults = results.filter(r => r.success);
@@ -51,7 +51,7 @@ const UploadNotes = () => {
         
         if (successfulResults.length > 0) {
           const combinedText = successfulResults
-            .map(r => `=== ${r.fileName} ===\n${r.text}`)
+            .map(r => `=== ${r.fileName} ===\n${r.result?.text || r.text}`)
             .join('\n\n');
           setTextValue(combinedText);
           setOriginalNotes(combinedText);

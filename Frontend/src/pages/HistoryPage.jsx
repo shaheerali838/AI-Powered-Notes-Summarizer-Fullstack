@@ -1,73 +1,37 @@
 import { useEffect, useState } from "react";
-import { Clock, ArrowRight, Trash2 } from "lucide-react";
+import { Clock, ArrowRight, Trash2, Lock, User } from "lucide-react";
 import { useNotes } from "../context/NotesContext";
+import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 
 const HistoryPage = () => {
-  const { setOriginalNotes, setSummaryOutput } = useNotes();
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { summaryHistory, deleteSummary, loadSummary, fetchHistory } = useNotes();
+  const { user, isGuest, openAuthModal } = useAuth();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     document.title = "AI Notes Summarizer - History";
-    fetchHistory();
+    if (user) {
+      fetchHistory();
+    }
   }, []);
 
-  const fetchHistory = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("http://localhost:5000/api/history");
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch history");
-      }
-
-      const data = await response.json();
-      setHistory(data);
-    } catch (err) {
-      setError(err.message);
-      console.error("Error fetching history:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteSummary = async (id) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/summary/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete summary");
-      }
-
-      // Remove the deleted item from local state
-      setHistory((prev) => prev.filter((item) => item.id !== id));
-    } catch (err) {
-      setError(err.message);
-      console.error("Error deleting summary:", err);
-    }
-  };
-
-  const handleViewSummary = (original, summary) => {
-    setOriginalNotes(original);
-    setSummaryOutput(summary);
+  const handleViewSummary = (summaryItem) => {
+    loadSummary(summaryItem);
   };
 
   const formatDate = (timestamp) => {
     if (!timestamp) return "Unknown date";
 
     // If it's a Firestore Timestamp object
-    if (timestamp._seconds) {
+    if (timestamp.toDate) {
       return new Intl.DateTimeFormat("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
         hour: "numeric",
         minute: "numeric",
-      }).format(new Date(timestamp._seconds * 1000));
+      }).format(timestamp.toDate());
     }
 
     // If it's already a JS Date string/number
@@ -82,6 +46,33 @@ const HistoryPage = () => {
       minute: "numeric",
     }).format(date);
   };
+
+  // Show authentication prompt for non-authenticated users
+  if (!user) {
+    return (
+      <div className="container mx-auto max-w-4xl">
+        <div className="flex items-center gap-2 mb-6">
+          <Clock className="h-6 w-6 text-blue-600" />
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Summary History
+          </h1>
+        </div>
+        <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm text-center">
+          <Lock className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign In Required</h2>
+          <p className="text-gray-600 mb-6">
+            Sign in to view and manage your summary history
+          </p>
+          <button
+            onClick={() => openAuthModal('login')}
+            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -99,28 +90,6 @@ const HistoryPage = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto max-w-4xl">
-        <div className="flex items-center gap-2 mb-6">
-          <Clock className="h-6 w-6 text-blue-600" />
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Summary History
-          </h1>
-        </div>
-        <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm text-center">
-          <p className="text-red-600 mb-4">Error: {error}</p>
-          <button
-            onClick={fetchHistory}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto max-w-4xl">
       <div className="flex items-center gap-2 mb-6">
@@ -130,7 +99,27 @@ const HistoryPage = () => {
         </h1>
       </div>
 
-      {history.length === 0 ? (
+      {/* Guest Mode Warning */}
+      {isGuest && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <User className="h-5 w-5 text-yellow-600" />
+            <h3 className="font-medium text-yellow-800">Guest Mode</h3>
+          </div>
+          <p className="text-sm text-yellow-700 mb-3">
+            Your history is temporary and will be cleared when you close the browser.
+            Sign in to save your summaries permanently.
+          </p>
+          <button
+            onClick={() => openAuthModal('login')}
+            className="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded hover:bg-yellow-200 transition-colors"
+          >
+            Sign In Now
+          </button>
+        </div>
+      )}
+
+      {summaryHistory.length === 0 ? (
         <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm text-center">
           <p className="text-gray-600 mb-4">
             You haven't created any summaries yet.
@@ -144,7 +133,7 @@ const HistoryPage = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {history.map((item) => (
+          {summaryHistory.map((item) => (
             <div
               key={item.id}
               className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm"
@@ -152,16 +141,18 @@ const HistoryPage = () => {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="font-medium text-gray-900">
-                    {typeof item.original === "string"
-                      ? item.original.substring(0, 50) +
-                        (item.original.length > 50 ? "..." : "")
+                    {(item.originalContent || item.original)
+                      ? (item.originalContent || item.original).substring(0, 50) +
+                        ((item.originalContent || item.original).length > 50 ? "..." : "")
                       : "No original notes available"}
                   </h3>
-                  <p className="text-sm text-gray-500">
-                    {item.timestamp
-                      ? formatDate(item.timestamp)
-                      : "Unknown date"}
-                  </p>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>{formatDate(item.createdAt || item.timestamp)}</span>
+                    {item.wordCount && <span>• {item.wordCount} words</span>}
+                    {item.fileType && item.fileType !== 'text' && (
+                      <span>• {item.fileType.toUpperCase()}</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -175,9 +166,7 @@ const HistoryPage = () => {
 
                   <Link
                     to="/"
-                    onClick={() =>
-                      handleViewSummary(item.original, item.summary)
-                    }
+                    onClick={() => handleViewSummary(item)}
                     className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
                   >
                     View <ArrowRight className="h-4 w-4" />
@@ -186,9 +175,7 @@ const HistoryPage = () => {
               </div>
 
               <div className="text-sm text-gray-700 line-clamp-2">
-                {typeof item.summary === "string"
-                  ? item.summary
-                  : item.summary?.summary || "No summary available"}
+                {item.summarizedContent || item.summary || "No summary available"}
               </div>
             </div>
           ))}

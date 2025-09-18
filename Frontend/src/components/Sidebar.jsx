@@ -199,14 +199,17 @@ const Sidebar = () => {
                             <FileText className="h-4 w-4 mt-0.5 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="truncate">
-                                {typeof item.original === "string"
-                                  ? item.original.substring(0, 30) + "..."
+                                {(item.originalContent || item.original)
+                                  ? (item.originalContent || item.original).substring(0, 30) + "..."
                                   : "Summary"}
                               </p>
                               <div className="flex items-center gap-2 text-xs text-gray-400">
-                                <span>{formatDate(item.timestamp || item.createdAt)}</span>
+                                <span>{formatDate(item.createdAt || item.timestamp)}</span>
                                 {item.wordCount && (
                                   <span>• {item.wordCount} words</span>
+                                )}
+                                {item.fileType && item.fileType !== 'text' && (
+                                  <span>• {item.fileType.toUpperCase()}</span>
                                 )}
                               </div>
                             </div>
@@ -227,6 +230,9 @@ const Sidebar = () => {
                   <div>{summaryHistory.length} summaries</div>
                   <div>
                     {summaryHistory.reduce((acc, item) => acc + (item.wordCount || 0), 0)} words processed
+                  </div>
+                  <div>
+                    Joined {new Date(summaryHistory[summaryHistory.length - 1]?.createdAt?.toDate?.() || Date.now()).toLocaleDateString()}
                   </div>
                 </div>
               </div>
