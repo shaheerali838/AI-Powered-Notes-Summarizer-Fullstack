@@ -12,18 +12,17 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ["lucide-react"],
+    exclude: [
+      "lucide-react",
+      "firebase/app",
+      "firebase/auth",
+      "firebase/firestore",
+    ],
   },
   build: {
     rollupOptions: {
       // Only externalize real browser-safe modules if needed
-      external: [
-        "firebase",
-        "firebase/app",
-        "firebase/auth",
-        "firebase/firestore",
-        "firebase/analytics",
-      ],
+      external: [],
     },
   },
 });
