@@ -16,7 +16,9 @@ const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
   return context;
 };
 
@@ -36,15 +38,27 @@ export const AuthProvider = ({ children }) => {
 
           // Create user doc if not anonymous
           if (!currentUser.isAnonymous) {
-            const userRef = doc(db, "users", currentUser.uid);
-            const userSnap = await getDoc(userRef);
+            try {
+              const userRef = doc(db, "users", currentUser.uid);
+              const userSnap = await getDoc(userRef);
 
-            if (!userSnap.exists()) {
-              await setDoc(userRef, {
-                email: currentUser.email,
-                displayName: currentUser.displayName || "",
-                createdAt: new Date(),
-              });
+              if (!userSnap.exists()) {
+                await setDoc(userRef, {
+                  email: currentUser.email,
+                  displayName: currentUser.displayName || "",
+                  photoURL: currentUser.photoURL || "",
+                  createdAt: new Date(),
+                  lastLoginAt: new Date(),
+                });
+              } else {
+                // Update last login
+                await setDoc(userRef, {
+                  lastLoginAt: new Date(),
+                }, { merge: true });
+              }
+            } catch (firestoreError) {
+              console.error("Firestore operation failed:", firestoreError);
+              // Don't throw here, allow user to continue
             }
           }
         } else {
@@ -52,7 +66,7 @@ export const AuthProvider = ({ children }) => {
           setIsGuest(false);
         }
       } catch (err) {
-        console.error("🔥 Firestore error in AuthContext:", err.message);
+        console.error("Auth state change error:", err);
       } finally {
         setLoading(false);
       }
@@ -62,22 +76,42 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const signInWithEmail = async (email, password) => {
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    return result.user;
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      return result.user;
+    } catch (error) {
+      console.error("Email sign-in error:", error);
+      throw new Error(getAuthErrorMessage(error.code));
+    }
   };
 
   const signUpWithEmail = async (email, password, displayName) => {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(result.user, { displayName });
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update profile with display name
+      if (displayName) {
+        await updateProfile(result.user, { displayName });
+      }
 
-    // Create Firestore user doc
-    await setDoc(doc(db, "users", result.user.uid), {
-      email,
-      displayName,
-      createdAt: new Date(),
-    });
+      // Create Firestore user doc
+      try {
+        await setDoc(doc(db, "users", result.user.uid), {
+          email,
+          displayName: displayName || "",
+          createdAt: new Date(),
+          lastLoginAt: new Date(),
+        });
+      } catch (firestoreError) {
+        console.error("Failed to create user document:", firestoreError);
+        // Don't throw here, user account was created successfully
+      }
 
-    return result.user;
+      return result.user;
+    } catch (error) {
+      console.error("Email sign-up error:", error);
+      throw new Error(getAuthErrorMessage(error.code));
+    }
   };
 
   const signInWithGoogle = async () => {
@@ -85,22 +119,35 @@ export const AuthProvider = ({ children }) => {
       const result = await signInWithPopup(auth, googleProvider);
       
       // Create user document if it doesn't exist
-      const userRef = doc(db, "users", result.user.uid);
-      const userSnap = await getDoc(userRef);
-      
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          email: result.user.email,
-          displayName: result.user.displayName,
-          photoURL: result.user.photoURL,
-          provider: 'google',
-          createdAt: new Date(),
-        });
+      try {
+        const userRef = doc(db, "users", result.user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            email: result.user.email,
+            displayName: result.user.displayName,
+            photoURL: result.user.photoURL,
+            provider: 'google',
+            createdAt: new Date(),
+            lastLoginAt: new Date(),
+          });
+        } else {
+          await setDoc(userRef, {
+            lastLoginAt: new Date(),
+          }, { merge: true });
+        }
+      } catch (firestoreError) {
+        console.error("Firestore operation failed:", firestoreError);
+        // Don't throw here, user is signed in successfully
       }
       
       return result.user;
     } catch (error) {
       console.error("Google sign-in error:", error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        throw new Error("Sign-in was cancelled");
+      }
       throw new Error("Failed to sign in with Google");
     }
   };
@@ -110,35 +157,58 @@ export const AuthProvider = ({ children }) => {
       const result = await signInWithPopup(auth, facebookProvider);
       
       // Create user document if it doesn't exist
-      const userRef = doc(db, "users", result.user.uid);
-      const userSnap = await getDoc(userRef);
-      
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          email: result.user.email,
-          displayName: result.user.displayName,
-          photoURL: result.user.photoURL,
-          provider: 'facebook',
-          createdAt: new Date(),
-        });
+      try {
+        const userRef = doc(db, "users", result.user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            email: result.user.email,
+            displayName: result.user.displayName,
+            photoURL: result.user.photoURL,
+            provider: 'facebook',
+            createdAt: new Date(),
+            lastLoginAt: new Date(),
+          });
+        } else {
+          await setDoc(userRef, {
+            lastLoginAt: new Date(),
+          }, { merge: true });
+        }
+      } catch (firestoreError) {
+        console.error("Firestore operation failed:", firestoreError);
+        // Don't throw here, user is signed in successfully
       }
       
       return result.user;
     } catch (error) {
       console.error("Facebook sign-in error:", error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        throw new Error("Sign-in was cancelled");
+      }
       throw new Error("Failed to sign in with Facebook");
     }
   };
 
   const continueAsGuest = async () => {
-    const result = await signInAnonymously(auth);
-    setIsGuest(true);
-    return result.user;
+    try {
+      const result = await signInAnonymously(auth);
+      setIsGuest(true);
+      return result.user;
+    } catch (error) {
+      console.error("Anonymous sign-in error:", error);
+      throw new Error("Failed to continue as guest");
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
-    setIsGuest(false);
+    try {
+      await signOut(auth);
+      setIsGuest(false);
+    } catch (error) {
+      console.error("Logout error:", error);
+      throw new Error("Failed to log out");
+    }
   };
 
   const openAuthModal = (mode = "login") => {
@@ -146,10 +216,34 @@ export const AuthProvider = ({ children }) => {
     setAuthModalOpen(true);
   };
 
-  const closeAuthModal = () => setAuthModalOpen(false);
+  const closeAuthModal = () => {
+    setAuthModalOpen(false);
+  };
 
-  const setAuthMode = (mode) => {
+  const changeAuthMode = (mode) => {
     setAuthMode(mode);
+  };
+
+  // Helper function to convert Firebase error codes to user-friendly messages
+  const getAuthErrorMessage = (errorCode) => {
+    switch (errorCode) {
+      case 'auth/user-not-found':
+        return 'No account found with this email address';
+      case 'auth/wrong-password':
+        return 'Incorrect password';
+      case 'auth/email-already-in-use':
+        return 'An account with this email already exists';
+      case 'auth/weak-password':
+        return 'Password should be at least 6 characters';
+      case 'auth/invalid-email':
+        return 'Invalid email address';
+      case 'auth/too-many-requests':
+        return 'Too many failed attempts. Please try again later';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your connection';
+      default:
+        return 'An error occurred. Please try again';
+    }
   };
 
   const value = {
@@ -158,7 +252,7 @@ export const AuthProvider = ({ children }) => {
     isGuest,
     authModalOpen,
     authMode,
-    setAuthMode,
+    setAuthMode: changeAuthMode,
     signInWithEmail,
     signUpWithEmail,
     signInWithGoogle,
@@ -167,8 +261,12 @@ export const AuthProvider = ({ children }) => {
     logout,
     openAuthModal,
     closeAuthModal,
-    isAuthenticated: !!user || isGuest,
+    isAuthenticated: !!user,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };
