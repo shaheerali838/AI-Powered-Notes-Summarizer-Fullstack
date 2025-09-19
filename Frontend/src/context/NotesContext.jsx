@@ -23,14 +23,113 @@ export const useNotes = () => {
 export const NotesProvider = ({ children }) => {
   const [originalNotes, setOriginalNotes] = useState("");
   const [summaryOutput, setSummaryOutput] = useState(null);
+  const [currentNote, setCurrentNote] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [summaryHistory, setSummaryHistory] = useState([]);
+  const [uploadedNotes, setUploadedNotes] = useState([]);
   const [error, setError] = useState("");
   const { user, isGuest, loading: authLoading } = useAuth();
 
   const API_URL =
     import.meta.env.VITE_APP_API_URL ||
     "https://ai-powered-notes-summarizer-backend.vercel.app";
+
+  // Upload file to backend
+  const uploadFile = async (file) => {
+    setIsUploading(true);
+    setUploadProgress(0);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const headers = {};
+      if (user && !isGuest) {
+        try {
+          const token = await user.getIdToken();
+          headers["Authorization"] = `Bearer ${token}`;
+        } catch (tokenError) {
+          console.error("Failed to get auth token:", tokenError);
+        }
+      }
+
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 200);
+
+      const response = await fetch(`${API_URL}/api/notes/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to upload file');
+      }
+
+      const data = await response.json();
+      
+      // Store the uploaded note data
+      const noteData = {
+        id: Date.now().toString(),
+        filename: data.filename,
+        extractedText: data.extractedText,
+        summary: data.summary,
+        keyPoints: data.keyPoints || [],
+        uploadedAt: new Date(),
+        fileType: file.type,
+        fileSize: file.size,
+      };
+
+      setCurrentNote(noteData);
+      
+      // Add to uploaded notes history
+      setUploadedNotes(prev => [noteData, ...prev]);
+      
+      // Save to storage based on user type
+      try {
+        if (user && !isGuest) {
+          await saveSummaryToFirestore({
+            originalContent: data.extractedText,
+            summarizedContent: data.summary,
+            keyPoints: data.keyPoints || [],
+            filename: data.filename,
+            fileType: file.type,
+            fileSize: file.size,
+          });
+        } else {
+          saveSummaryToSessionStorage({
+            originalContent: data.extractedText,
+            summarizedContent: data.summary,
+            keyPoints: data.keyPoints || [],
+            filename: data.filename,
+            fileType: file.type,
+            fileSize: file.size,
+          });
+          fetchHistoryFromSessionStorage();
+        }
+      } catch (saveError) {
+        console.error("Failed to save uploaded note:", saveError);
+      }
+
+      return { success: true, data };
+    } catch (err) {
+      setError(err.message);
+      console.error("Upload Error:", err);
+      return { success: false, error: err.message };
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
 
   // Save summary to Firestore
   const saveSummaryToFirestore = async (summaryData) => {
@@ -231,6 +330,7 @@ export const NotesProvider = ({ children }) => {
   const clearNotes = () => {
     setOriginalNotes("");
     setSummaryOutput(null);
+    setCurrentNote(null);
     setError("");
   };
 
@@ -253,9 +353,15 @@ export const NotesProvider = ({ children }) => {
         setOriginalNotes,
         summaryOutput,
         setSummaryOutput,
+        currentNote,
+        setCurrentNote,
         isGenerating,
+        isUploading,
+        uploadProgress,
         summaryHistory,
+        uploadedNotes,
         error,
+        uploadFile,
         generateSummary,
         fetchHistory,
         deleteSummary,

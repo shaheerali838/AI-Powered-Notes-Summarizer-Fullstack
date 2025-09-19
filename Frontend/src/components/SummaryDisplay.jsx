@@ -3,11 +3,12 @@ import { useState } from "react";
 import { useNotes } from "../context/NotesContext";
 
 const SummaryDisplay = () => {
-  const { summaryOutput, isGenerating } = useNotes();
+  const { summaryOutput, isGenerating, currentNote } = useNotes();
   const [copied, setCopied] = useState(false);
 
-  const summaryText = summaryOutput?.summary || "";
-  let keyPoints = summaryOutput?.keyPoints || [];
+  // Use summary from current note if available, otherwise use summaryOutput
+  const summaryText = currentNote?.summary || summaryOutput?.summary || "";
+  let keyPoints = currentNote?.keyPoints || summaryOutput?.keyPoints || [];
 
   // Remove unwanted heading lines if present
   if (keyPoints.length && keyPoints[0].includes("Re-Summarized")) {

@@ -1,15 +1,14 @@
 import { useRef, useState } from 'react';
-import { Upload, FileText, Image, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Image, AlertCircle, X } from 'lucide-react';
 import { useNotes } from '../context/NotesContext';
-import { processFile, processMultipleFiles, validateFile, SUPPORTED_FILE_TYPES } from '../utils/fileProcessor';
+import { validateFile, SUPPORTED_FILE_TYPES } from '../utils/fileProcessor';
 
 const UploadNotes = () => {
-  const { setOriginalNotes } = useNotes();
+  const { setOriginalNotes, uploadFile, isUploading, uploadProgress } = useNotes();
   const [uploadMethod, setUploadMethod] = useState('paste');
   const [textValue, setTextValue] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingProgress, setProcessingProgress] = useState(0);
   const [errors, setErrors] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const fileInputRef = useRef(null);
   
   const handleFileChange = async (e) => {
@@ -17,51 +16,77 @@ const UploadNotes = () => {
     if (files.length === 0) return;
     
     setErrors([]);
-    setIsProcessing(true);
-    setProcessingProgress(0);
+    setSelectedFiles(files);
+    
+    // Validate all files first
+    const validationErrors = [];
+    files.forEach(file => {
+      const fileErrors = validateFile(file);
+      if (fileErrors.length > 0) {
+        validationErrors.push(`${file.name}: ${fileErrors.join(', ')}`);
+      }
+    });
+    
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+      setSelectedFiles([]);
+      return;
+    }
+  };
+  
+  const handleUploadFiles = async () => {
+    if (selectedFiles.length === 0) return;
     
     try {
-      // Validate all files first
-      const validationErrors = [];
-      files.forEach(file => {
-        const fileErrors = validateFile(file);
-        if (fileErrors.length > 0) {
-          validationErrors.push(`${file.name}: ${fileErrors.join(', ')}`);
+      setErrors([]);
+      
+      if (selectedFiles.length === 1) {
+        const result = await uploadFile(selectedFiles[0]);
+        if (result.success) {
+          setTextValue(result.data.extractedText);
+          setOriginalNotes(result.data.extractedText);
+          setSelectedFiles([]);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        } else {
+          setErrors([result.error]);
         }
-      });
-      
-      if (validationErrors.length > 0) {
-        setErrors(validationErrors);
-        return;
-      }
-      
-      // Process files
-      if (files.length === 1) {
-        const result = await processFile(files[0], setProcessingProgress);
-        setTextValue(result.text);
-        setOriginalNotes(result.text);
       } else {
-        const results = await processMultipleFiles(files, setProcessingProgress);
+        // Handle multiple files
+        const results = await Promise.all(
+          selectedFiles.map(file => uploadFile(file))
+        );
+        
         const successfulResults = results.filter(r => r.success);
         const failedResults = results.filter(r => !r.success);
         
         if (failedResults.length > 0) {
-          setErrors(failedResults.map(r => `${r.fileName}: ${r.error}`));
+          setErrors(failedResults.map(r => r.error));
         }
         
         if (successfulResults.length > 0) {
           const combinedText = successfulResults
-            .map(r => `=== ${r.fileName} ===\n${r.result?.text || r.text}`)
+            .map(r => `=== ${r.data.filename} ===\n${r.data.extractedText}`)
             .join('\n\n');
           setTextValue(combinedText);
           setOriginalNotes(combinedText);
+          setSelectedFiles([]);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
         }
       }
     } catch (error) {
-      setErrors([`Processing failed: ${error.message}`]);
-    } finally {
-      setIsProcessing(false);
-      setProcessingProgress(0);
+      setErrors([`Upload failed: ${error.message}`]);
+    }
+  };
+  
+  const removeSelectedFile = (index) => {
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    setSelectedFiles(newFiles);
+    if (newFiles.length === 0 && fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
   
@@ -158,24 +183,55 @@ const UploadNotes = () => {
           />
         ) : (
           <div className="flex-1 flex flex-col">
+            {/* Selected Files Display */}
+            {selectedFiles.length > 0 && (
+              <div className="mb-4 space-y-2">
+                <h3 className="text-sm font-medium text-gray-700">Selected Files:</h3>
+                {selectedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-700">{file.name}</span>
+                      <span className="text-xs text-gray-500">
+                        ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => removeSelectedFile(index)}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={handleUploadFiles}
+                  disabled={isUploading}
+                  className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}`}
+                </button>
+              </div>
+            )}
+            
             <div className="flex-1 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#4F88FF] transition-colors relative">
-              {isProcessing && (
+              {isUploading && (
                 <div className="absolute inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center rounded-lg">
                   <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                  <p className="text-sm text-gray-600 mb-2">Processing files...</p>
+                  <p className="text-sm text-gray-600 mb-2">Uploading and processing...</p>
                   <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-blue-600 transition-all duration-300"
-                      style={{ width: `${processingProgress}%` }}
+                      style={{ width: `${uploadProgress}%` }}
                     ></div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">{processingProgress}%</p>
+                  <p className="text-xs text-gray-500 mt-2">{uploadProgress}%</p>
                 </div>
               )}
               
             <button
               onClick={handleUploadClick}
-                disabled={isProcessing}
+                disabled={isUploading}
                 className="flex flex-col items-center gap-3 p-8 text-gray-600 hover:text-[#4F88FF] transition-colors disabled:opacity-50"
             >
                 <div className="flex items-center gap-2 mb-2">
@@ -183,7 +239,7 @@ const UploadNotes = () => {
                   <FileText className="h-6 w-6" />
                   <Image className="h-6 w-6" />
                 </div>
-                <span className="font-medium">Select files</span>
+                <span className="font-medium">{selectedFiles.length > 0 ? 'Select more files' : 'Select files'}</span>
                 <span className="text-sm text-gray-500 text-center max-w-xs">
                   Supports multiple files: {getSupportedFormatsText()}
                 </span>
