@@ -39,7 +39,7 @@ A powerful web application that uses AI to transform your lengthy notes, documen
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/ai-notes-summarizer.git
+   git clone https://github.com/shaheerali838/ai-notes-summarizer.git
    cd ai-notes-summarizer
    ```
 
