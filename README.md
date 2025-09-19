@@ -241,4 +241,4 @@ If you encounter any issues or have questions:
 
 ---
 
-**Made with ❤️ by [Your Name](https://github.com/shaheerali838)**
+**Made with ❤️ by [Shaheer Ali](https://github.com/shaheerali838)**
