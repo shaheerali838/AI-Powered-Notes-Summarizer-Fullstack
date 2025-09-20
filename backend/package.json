@@ -1,0 +1,37 @@
+{
+  "name": "ai-notes-summarizer-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Backend service for AI Notes Summarizer with file processing and authentication",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "build": "echo 'No build step required for Node.js'",
+    "vercel-build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "firebase-admin": "^12.0.0",
+    "pdf-parse": "^1.1.1",
+    "mammoth": "^1.6.0",
+    "tesseract.js": "^4.1.1",
+    "dotenv": "^16.3.1",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "ai",
+    "summarizer",
+    "pdf",
+    "ocr",
+    "file-processing"
+  ],
+  "author": "AI Notes Summarizer Team",
+  "license": "MIT"
+}
