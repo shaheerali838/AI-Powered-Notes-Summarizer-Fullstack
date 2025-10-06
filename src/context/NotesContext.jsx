@@ -32,9 +32,10 @@ export const NotesProvider = ({ children }) => {
   const [error, setError] = useState("");
   const { user, isGuest, loading: authLoading } = useAuth();
 
-  const API_URL =
-    import.meta.env.VITE_APP_API_URL ||
-    "https://ai-powered-notes-summarizer-6w9z.vercel.app/";
+  // Normalize API URL: prefer env var, fall back to relative '/api' for same-origin deployments.
+  const rawApiUrl = import.meta.env.VITE_APP_API_URL || "/api";
+  // Remove any trailing slash to avoid double-slashes when appending paths
+  const API_URL = rawApiUrl.replace(/\/+$/, "");
 
   // Upload file to backend
   const uploadFile = async (file) => {

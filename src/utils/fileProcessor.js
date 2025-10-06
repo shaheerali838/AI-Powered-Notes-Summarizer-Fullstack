@@ -46,16 +46,16 @@ export const processFile = async (file, onProgress = () => {}) => {
 
     if (SUPPORTED_FILE_TYPES.text.includes(extension)) {
       const text = await processTextFile(file, onProgress);
-      return { text, fileType: 'text' };
+      return { text, fileType: "text" };
     } else if (SUPPORTED_FILE_TYPES.pdf.includes(extension)) {
       const text = await processPdfFile(file, onProgress);
-      return { text, fileType: 'pdf' };
+      return { text, fileType: "pdf" };
     } else if (SUPPORTED_FILE_TYPES.image.includes(extension)) {
       const text = await processImageFile(file, onProgress);
-      return { text, fileType: 'image' };
+      return { text, fileType: "image" };
     } else if (SUPPORTED_FILE_TYPES.document.includes(extension)) {
       const text = await processDocxFile(file, onProgress);
-      return { text, fileType: 'document' };
+      return { text, fileType: "document" };
     }
 
     throw new Error(`Unsupported file type: ${extension}`);
@@ -97,16 +97,29 @@ const processImageFile = async (file, onProgress) => {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch("/api/ocr", {
+  // Use environment-configured API URL (fall back to same-origin '/api')
+  const rawApiUrl = import.meta.env.VITE_APP_API_URL || "/api";
+  const API_URL = rawApiUrl.replace(/\/+$/, "");
+
+  // Send image to backend upload endpoint which handles OCR and returns extractedText
+  const res = await fetch(`${API_URL}/notes/upload`, {
     method: "POST",
     body: formData,
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   onProgress(100);
 
-  if (data.error) throw new Error(data.error);
-  return data.text.trim();
+  if (!res.ok) {
+    // backend may return { error: "..." } or a message field
+    const message =
+      data.message || data.error || `Upload failed with status ${res.status}`;
+    throw new Error(message);
+  }
+
+  // upload handler returns `extractedText` when successful
+  const extracted = data.extractedText || data.text || "";
+  return extracted.trim();
 };
 
 const processDocxFile = async (file, onProgress) => {

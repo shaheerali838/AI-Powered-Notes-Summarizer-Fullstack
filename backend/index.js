@@ -7,14 +7,28 @@ admin.initializeApp();
 const { summarizeText } = require("./handlers/summarize");
 const { uploadFile } = require("./handlers/upload");
 
-// ✅ Allow your frontend domain + localhost for development
-const allowedOrigins = [
+// Allowed origins can be configured via env var BACKEND_ALLOWED_ORIGINS (comma-separated)
+// For quick local debugging you can set ALLOW_ALL_ORIGINS=true
+const defaultAllowed = [
   "https://ai-powered-notes-summarizer.vercel.app",
   "http://localhost:5173",
 ];
 
+const allowedOrigins = process.env.BACKEND_ALLOWED_ORIGINS
+  ? process.env.BACKEND_ALLOWED_ORIGINS.split(",").map((s) => s.trim())
+  : defaultAllowed;
+
+const allowAllOrigins = process.env.ALLOW_ALL_ORIGINS === "true";
+
+// Use function form to validate origin dynamically
 const corsHandler = cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // If no origin (e.g., server-to-server) allow it
+    if (!origin) return callback(null, true);
+    if (allowAllOrigins) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -27,10 +41,17 @@ exports.api = functions
   })
   .https.onRequest(async (req, res) => {
     const origin = req.headers.origin;
+    // Log request info to help debug CORS/path issues during development
+    console.log(
+      `API request => method=${req.method} url=${req.url} path=${req.path} origin=${origin}`
+    );
 
     // ✅ Handle preflight (OPTIONS) request immediately
     if (req.method === "OPTIONS") {
-      if (allowedOrigins.includes(origin)) {
+      // For OPTIONS, echo the origin back if allowed (can't use '*' when credentials=true)
+      if (!origin) {
+        res.set("Access-Control-Allow-Origin", "*");
+      } else if (allowAllOrigins || allowedOrigins.includes(origin)) {
         res.set("Access-Control-Allow-Origin", origin);
       }
       res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
