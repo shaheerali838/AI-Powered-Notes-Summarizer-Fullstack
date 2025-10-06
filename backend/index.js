@@ -8,11 +8,13 @@ const { summarizeText } = require("./handlers/summarize");
 const { uploadFile } = require("./handlers/upload");
 
 // ✅ Allow your frontend domain + localhost for development
+const allowedOrigins = [
+  "https://ai-powered-notes-summarizer.vercel.app",
+  "http://localhost:5173",
+];
+
 const corsHandler = cors({
-  origin: [
-    "https://ai-powered-notes-summarizer.vercel.app",
-    "http://localhost:5173",
-  ],
+  origin: allowedOrigins,
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -24,39 +26,44 @@ exports.api = functions
     memory: "2GB",
   })
   .https.onRequest(async (req, res) => {
-    corsHandler(req, res, async () => {
-      // ✅ Handle preflight requests
-      if (req.method === "OPTIONS") {
-        res.set(
-          "Access-Control-Allow-Origin",
-          "https://ai-powered-notes-summarizer.vercel.app"
-        );
-        res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        res.status(204).send("");
-        return;
-      }
+    const origin = req.headers.origin;
 
+    // ✅ Handle preflight (OPTIONS) request immediately
+    if (req.method === "OPTIONS") {
+      if (allowedOrigins.includes(origin)) {
+        res.set("Access-Control-Allow-Origin", origin);
+      }
+      res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      res.set("Access-Control-Allow-Credentials", "true");
+      res.status(204).send("");
+      return;
+    }
+
+    // ✅ All other requests go through corsHandler
+    corsHandler(req, res, async () => {
       try {
         const path = req.path || req.url;
 
         if (path === "/summarize" || path === "/api/summarize") {
-          await handleSummarize(req, res);
+          await handleSummarize(req, res, origin);
         } else if (path === "/notes/upload" || path === "/api/notes/upload") {
-          await handleUpload(req, res);
+          await handleUpload(req, res, origin);
         } else {
           res.status(404).json({ error: "Endpoint not found", path });
         }
       } catch (err) {
         console.error("API Error:", err);
-        res
-          .status(500)
-          .json({ error: "Internal server error", message: err.message });
+        res.status(500).json({
+          error: "Internal server error",
+          message: err.message,
+        });
       }
     });
   });
 
-async function handleSummarize(req, res) {
+// ✅ Summarization handler
+async function handleSummarize(req, res, origin) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;
@@ -104,10 +111,10 @@ async function handleSummarize(req, res) {
       }
     }
 
-    res.set(
-      "Access-Control-Allow-Origin",
-      "https://ai-powered-notes-summarizer.vercel.app"
-    );
+    if (allowedOrigins.includes(origin)) {
+      res.set("Access-Control-Allow-Origin", origin);
+    }
+
     res.status(200).json({
       original: text,
       summary: result.summary,
@@ -122,7 +129,8 @@ async function handleSummarize(req, res) {
   }
 }
 
-async function handleUpload(req, res) {
+// ✅ Upload handler
+async function handleUpload(req, res, origin) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;
@@ -164,10 +172,10 @@ async function handleUpload(req, res) {
       }
     }
 
-    res.set(
-      "Access-Control-Allow-Origin",
-      "https://ai-powered-notes-summarizer.vercel.app"
-    );
+    if (allowedOrigins.includes(origin)) {
+      res.set("Access-Control-Allow-Origin", origin);
+    }
+
     res.status(200).json(result);
   } catch (error) {
     console.error("Upload error:", error);
