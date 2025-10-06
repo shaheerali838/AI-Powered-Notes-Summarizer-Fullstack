@@ -34,7 +34,7 @@ export const NotesProvider = ({ children }) => {
 
   const API_URL =
     import.meta.env.VITE_APP_API_URL ||
-    "https://us-central1-ai-notes-summarize.cloudfunctions.net/api";
+    "https://ai-powered-notes-summarizer-6w9z.vercel.app/";
 
   // Upload file to backend
   const uploadFile = async (file) => {
@@ -44,7 +44,7 @@ export const NotesProvider = ({ children }) => {
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       const headers = {};
       if (user && !isGuest) {
@@ -58,11 +58,11 @@ export const NotesProvider = ({ children }) => {
 
       // Simulate progress for better UX
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
+        setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
 
       const response = await fetch(`${API_URL}/notes/upload`, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: formData,
       });
@@ -72,11 +72,11 @@ export const NotesProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to upload file');
+        throw new Error(errorData.message || "Failed to upload file");
       }
 
       const data = await response.json();
-      
+
       // Store the uploaded note data
       const noteData = {
         id: Date.now().toString(),
@@ -90,10 +90,10 @@ export const NotesProvider = ({ children }) => {
       };
 
       setCurrentNote(noteData);
-      
+
       // Add to uploaded notes history
-      setUploadedNotes(prev => [noteData, ...prev]);
-      
+      setUploadedNotes((prev) => [noteData, ...prev]);
+
       // Save to storage based on user type
       try {
         if (user && !isGuest) {
