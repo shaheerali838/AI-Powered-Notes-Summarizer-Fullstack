@@ -34,7 +34,7 @@ export const NotesProvider = ({ children }) => {
 
   const API_URL =
     import.meta.env.VITE_APP_API_URL ||
-    "https://ai-powered-notes-summarizer-backend.vercel.app";
+    "https://us-central1-ai-notes-summarize.cloudfunctions.net/api";
 
   // Upload file to backend
   const uploadFile = async (file) => {
@@ -61,7 +61,7 @@ export const NotesProvider = ({ children }) => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
-      const response = await fetch(`${API_URL}/api/notes/upload`, {
+      const response = await fetch(`${API_URL}/notes/upload`, {
         method: 'POST',
         headers,
         body: formData,
@@ -249,7 +249,7 @@ export const NotesProvider = ({ children }) => {
         }
       }
 
-      const response = await fetch(`${API_URL}/api/summarize`, {
+      const response = await fetch(`${API_URL}/summarize`, {
         method: "POST",
         headers,
         body: JSON.stringify({ text: originalNotes }),

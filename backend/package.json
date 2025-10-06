@@ -1,5 +1,5 @@
 {
-  "name": "ai-notes-summarizer-functions",
+  "name": "ai-notes-summarizer-backend",
   "version": "1.0.0",
   "description": "Firebase Cloud Functions for AI Notes Summarizer",
   "main": "index.js",
