@@ -1,11 +1,22 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const cors = require("cors")({ origin: true });
+const cors = require("cors");
 
 admin.initializeApp();
 
 const { summarizeText } = require("./handlers/summarize");
 const { uploadFile } = require("./handlers/upload");
+
+// ✅ Allow your frontend domain + localhost for development
+const corsHandler = cors({
+  origin: [
+    "https://ai-powered-notes-summarizer.vercel.app",
+    "http://localhost:5173",
+  ],
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+});
 
 exports.api = functions
   .runWith({
@@ -13,20 +24,34 @@ exports.api = functions
     memory: "2GB",
   })
   .https.onRequest(async (req, res) => {
-    cors(req, res, async () => {
+    corsHandler(req, res, async () => {
+      // ✅ Handle preflight requests
       if (req.method === "OPTIONS") {
-        res.status(200).send();
+        res.set(
+          "Access-Control-Allow-Origin",
+          "https://ai-powered-notes-summarizer.vercel.app"
+        );
+        res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        res.status(204).send("");
         return;
       }
 
-      const path = req.path || req.url;
+      try {
+        const path = req.path || req.url;
 
-      if (path === "/summarize" || path === "/api/summarize") {
-        await handleSummarize(req, res);
-      } else if (path === "/notes/upload" || path === "/api/notes/upload") {
-        await handleUpload(req, res);
-      } else {
-        res.status(404).json({ error: "Endpoint not found", path });
+        if (path === "/summarize" || path === "/api/summarize") {
+          await handleSummarize(req, res);
+        } else if (path === "/notes/upload" || path === "/api/notes/upload") {
+          await handleUpload(req, res);
+        } else {
+          res.status(404).json({ error: "Endpoint not found", path });
+        }
+      } catch (err) {
+        console.error("API Error:", err);
+        res
+          .status(500)
+          .json({ error: "Internal server error", message: err.message });
       }
     });
   });
@@ -40,20 +65,15 @@ async function handleSummarize(req, res) {
   try {
     const { text } = req.body;
 
-    if (!text || typeof text !== "string") {
-      res.status(400).json({ error: "Invalid text input" });
-      return;
-    }
-
-    if (text.trim().length === 0) {
-      res.status(400).json({ error: "Text cannot be empty" });
+    if (!text || typeof text !== "string" || text.trim().length === 0) {
+      res.status(400).json({ error: "Invalid or empty text input" });
       return;
     }
 
     const authHeader = req.headers.authorization;
     let userId = null;
 
-    if (authHeader && authHeader.startsWith("Bearer ")) {
+    if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.split("Bearer ")[1];
       try {
         const decodedToken = await admin.auth().verifyIdToken(token);
@@ -84,6 +104,10 @@ async function handleSummarize(req, res) {
       }
     }
 
+    res.set(
+      "Access-Control-Allow-Origin",
+      "https://ai-powered-notes-summarizer.vercel.app"
+    );
     res.status(200).json({
       original: text,
       summary: result.summary,
@@ -108,7 +132,7 @@ async function handleUpload(req, res) {
     const authHeader = req.headers.authorization;
     let userId = null;
 
-    if (authHeader && authHeader.startsWith("Bearer ")) {
+    if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.split("Bearer ")[1];
       try {
         const decodedToken = await admin.auth().verifyIdToken(token);
@@ -140,6 +164,10 @@ async function handleUpload(req, res) {
       }
     }
 
+    res.set(
+      "Access-Control-Allow-Origin",
+      "https://ai-powered-notes-summarizer.vercel.app"
+    );
     res.status(200).json(result);
   } catch (error) {
     console.error("Upload error:", error);
