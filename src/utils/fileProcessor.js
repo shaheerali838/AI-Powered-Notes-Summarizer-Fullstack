@@ -97,12 +97,12 @@ const processImageFile = async (file, onProgress) => {
   const formData = new FormData();
   formData.append("file", file);
 
-  // Use Supabase Edge Functions
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const API_URL = `${SUPABASE_URL}/functions/v1`;
+  // Use Firebase Cloud Functions or configured API URL
+  const rawApiUrl = import.meta.env.VITE_APP_API_URL || "/api";
+  const API_URL = rawApiUrl.replace(/\/+$/, "");
 
   // Send image to backend upload endpoint which handles OCR and returns extractedText
-  const res = await fetch(`${API_URL}/notes-upload`, {
+  const res = await fetch(`${API_URL}/notes/upload`, {
     method: "POST",
     body: formData,
   });
