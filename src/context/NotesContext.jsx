@@ -32,10 +32,9 @@ export const NotesProvider = ({ children }) => {
   const [error, setError] = useState("");
   const { user, isGuest, loading: authLoading } = useAuth();
 
-  // Normalize API URL: prefer env var, fall back to relative '/api' for same-origin deployments.
-  const rawApiUrl = import.meta.env.VITE_APP_API_URL || "/api";
-  // Remove any trailing slash to avoid double-slashes when appending paths
-  const API_URL = rawApiUrl.replace(/\/+$/, "");
+  // Use Supabase Edge Functions
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  const API_URL = `${SUPABASE_URL}/functions/v1`;
 
   // Upload file to backend
   const uploadFile = async (file) => {
@@ -62,7 +61,7 @@ export const NotesProvider = ({ children }) => {
         setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
 
-      const response = await fetch(`${API_URL}/notes/upload`, {
+      const response = await fetch(`${API_URL}/notes-upload`, {
         method: "POST",
         headers,
         body: formData,
