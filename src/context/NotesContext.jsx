@@ -229,15 +229,18 @@ export const NotesProvider = ({ children }) => {
 
   // Generate summary
   const generateSummary = async () => {
+    // 1. Validation
     if (!originalNotes.trim()) {
       setError("Please enter some text to summarize");
       return;
     }
 
+    // 2. Setup State
     setIsGenerating(true);
     setError("");
 
     try {
+      // 3. Define Headers (Inside the try block is fine now)
       const headers = { "Content-Type": "application/json" };
 
       if (user && !isGuest) {
@@ -249,17 +252,28 @@ export const NotesProvider = ({ children }) => {
         }
       }
 
+      // 4. Single API Call
       const response = await fetch(`${API_URL}/summarize`, {
         method: "POST",
-        headers,
+        headers, // ✅ headers is visible here because we are inside the try block
         body: JSON.stringify({ text: originalNotes }),
       });
 
+      // 5. Improved Error Handling
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to generate summary");
+
+        // Fix: Check all possible error fields from backend
+        const errorMessage =
+          errorData.details ||
+          errorData.error ||
+          errorData.message ||
+          "Failed to generate summary";
+
+        throw new Error(errorMessage);
       }
 
+      // 6. Process Success Response
       const data = await response.json();
 
       const summaryData = {
@@ -275,6 +289,7 @@ export const NotesProvider = ({ children }) => {
         original: data.original,
       });
 
+      // 7. Save to History
       try {
         if (user && !isGuest) await saveSummaryToFirestore(summaryData);
         else {
@@ -285,11 +300,20 @@ export const NotesProvider = ({ children }) => {
         console.error("Failed to save summary:", saveError);
       }
     } catch (err) {
+      // 8. Catch & Display Errors
       setError(err.message);
       console.error("API Error:", err);
     } finally {
+      // 9. Cleanup
       setIsGenerating(false);
     }
+    // ... inside generateSummary function
+    const response = await fetch(`${API_URL}/api/summarize`, {
+      // Added /api/ here
+      method: "POST",
+      headers,
+      body: JSON.stringify({ text: originalNotes }),
+    });
   };
 
   // Delete summary
