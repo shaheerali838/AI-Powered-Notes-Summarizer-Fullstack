@@ -47,14 +47,14 @@ const SummaryDisplay = () => {
 
   // Recursively render tree
   const renderTree = (nodes) => (
-    <ol className="list-decimal ml-6 space-y-1">
+    <ul className=" ml-6 space-y-1">
       {nodes.map((node, i) => (
         <li key={i}>
           {node.text}
           {node.children.length > 0 && renderTree(node.children)}
         </li>
       ))}
-    </ol>
+    </ul>
   );
 
   const tree = buildTree(keyPoints);
