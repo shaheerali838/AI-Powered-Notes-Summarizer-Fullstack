@@ -32,8 +32,9 @@ export const NotesProvider = ({ children }) => {
   const [error, setError] = useState("");
   const { user, isGuest, loading: authLoading } = useAuth();
 
-  // Use Firebase Cloud Functions or configured API URL
-  const rawApiUrl = import.meta.env.VITE_APP_API_URL || "/api";
+  // FIX 1: Change default from "/api" to "" (empty string)
+  // This prevents the double "/api/api" issue locally
+  const rawApiUrl = import.meta.env.VITE_APP_API_URL || "";
   const API_URL = rawApiUrl.replace(/\/+$/, "");
 
   // Upload file to backend
@@ -61,7 +62,8 @@ export const NotesProvider = ({ children }) => {
         setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
 
-      const response = await fetch(`${API_URL}/notes/upload`, {
+      // FIX 2: Added "/api" prefix here to match backend route
+      const response = await fetch(`${API_URL}/api/notes/upload`, {
         method: "POST",
         headers,
         body: formData,
@@ -240,7 +242,7 @@ export const NotesProvider = ({ children }) => {
     setError("");
 
     try {
-      // 3. Define Headers (Inside the try block is fine now)
+      // 3. Define Headers
       const headers = { "Content-Type": "application/json" };
 
       if (user && !isGuest) {
@@ -252,10 +254,12 @@ export const NotesProvider = ({ children }) => {
         }
       }
 
-      // 4. Single API Call
-      const response = await fetch(`${API_URL}/summarize`, {
+      // 4. API Call
+      // LOCALLY: "" + "/api/summarize" = "/api/summarize" (Correct)
+      // PROD: "https://...app" + "/api/summarize" = "https://...app/api/summarize" (Correct)
+      const response = await fetch(`${API_URL}/api/summarize`, {
         method: "POST",
-        headers, // ✅ headers is visible here because we are inside the try block
+        headers,
         body: JSON.stringify({ text: originalNotes }),
       });
 
@@ -307,13 +311,6 @@ export const NotesProvider = ({ children }) => {
       // 9. Cleanup
       setIsGenerating(false);
     }
-    // ... inside generateSummary function
-    const response = await fetch(`${API_URL}/api/summarize`, {
-      // Added /api/ here
-      method: "POST",
-      headers,
-      body: JSON.stringify({ text: originalNotes }),
-    });
   };
 
   // Delete summary
