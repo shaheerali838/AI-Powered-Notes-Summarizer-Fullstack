@@ -254,20 +254,19 @@ export const NotesProvider = ({ children }) => {
         }
       }
 
-      // 4. API Call
-      // LOCALLY: "" + "/api/summarize" = "/api/summarize" (Correct)
-      // PROD: "https://...app" + "/api/summarize" = "https://...app/api/summarize" (Correct)
+      // 4. API Call (Corrected URL)
+      // Your backend routes are served at /api/summarize
+      // We ensure the URL includes /api/summarize
       const response = await fetch(`${API_URL}/api/summarize`, {
         method: "POST",
         headers,
         body: JSON.stringify({ text: originalNotes }),
       });
 
-      // 5. Improved Error Handling
+      // 5. Error Handling
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
 
-        // Fix: Check all possible error fields from backend
         const errorMessage =
           errorData.details ||
           errorData.error ||
