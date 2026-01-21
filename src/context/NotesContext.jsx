@@ -144,7 +144,7 @@ export const NotesProvider = ({ children }) => {
           ...summaryData,
           createdAt: new Date(),
           fileType: summaryData.fileType || "text",
-        }
+        },
       );
       return docRef.id;
     } catch (error) {
@@ -157,7 +157,7 @@ export const NotesProvider = ({ children }) => {
   const saveSummaryToSessionStorage = (summaryData) => {
     try {
       const guestSummaries = JSON.parse(
-        sessionStorage.getItem("guestSummaries") || "[]"
+        sessionStorage.getItem("guestSummaries") || "[]",
       );
       const newSummary = {
         id: Date.now().toString(),
@@ -182,7 +182,7 @@ export const NotesProvider = ({ children }) => {
     try {
       const q = query(
         collection(db, "users", user.uid, "summaries"),
-        orderBy("createdAt", "desc")
+        orderBy("createdAt", "desc"),
       );
 
       const unsubscribe = onSnapshot(
@@ -197,7 +197,7 @@ export const NotesProvider = ({ children }) => {
         (error) => {
           console.error("Error fetching history:", error);
           setError("Failed to load history");
-        }
+        },
       );
 
       return unsubscribe;
@@ -211,7 +211,7 @@ export const NotesProvider = ({ children }) => {
   const fetchHistoryFromSessionStorage = () => {
     try {
       const guestSummaries = JSON.parse(
-        sessionStorage.getItem("guestSummaries") || "[]"
+        sessionStorage.getItem("guestSummaries") || "[]",
       );
       setSummaryHistory(guestSummaries);
     } catch (error) {
@@ -319,14 +319,14 @@ export const NotesProvider = ({ children }) => {
         await deleteDoc(doc(db, "users", user.uid, "summaries", id));
       } else {
         const guestSummaries = JSON.parse(
-          sessionStorage.getItem("guestSummaries") || "[]"
+          sessionStorage.getItem("guestSummaries") || "[]",
         );
         const updatedSummaries = guestSummaries.filter(
-          (item) => item.id !== id
+          (item) => item.id !== id,
         );
         sessionStorage.setItem(
           "guestSummaries",
-          JSON.stringify(updatedSummaries)
+          JSON.stringify(updatedSummaries),
         );
         setSummaryHistory(updatedSummaries);
       }
