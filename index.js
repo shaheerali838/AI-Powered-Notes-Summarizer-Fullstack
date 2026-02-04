@@ -10,7 +10,7 @@ import notesRoutes from "./routes/notes.js";
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
@@ -66,11 +66,5 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== "production") {
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
-}
 // ✅ EXPORT HANDLER FOR VERCEL
 export default serverless(app);
