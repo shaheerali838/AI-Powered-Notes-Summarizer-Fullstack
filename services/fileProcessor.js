@@ -1,12 +1,9 @@
-import pdf from "pdf-parse-debugging-disabled";
-import mammoth from "mammoth";
-import { createWorker } from "tesseract.js";
-
 /**
  * Extract text from PDF buffer
  */
 export const extractTextFromPDF = async (buffer) => {
   try {
+    const { default: pdf } = await import("pdf-parse-debugging-disabled");
     const data = await pdf(buffer);
     return data.text;
   } catch (error) {
@@ -19,6 +16,7 @@ export const extractTextFromPDF = async (buffer) => {
  */
 export const extractTextFromDOCX = async (buffer) => {
   try {
+    const { default: mammoth } = await import("mammoth");
     const result = await mammoth.extractRawText({ buffer });
     return result.value;
   } catch (error) {
@@ -32,6 +30,7 @@ export const extractTextFromDOCX = async (buffer) => {
 export const extractTextFromImage = async (buffer) => {
   let worker;
   try {
+    const { createWorker } = await import("tesseract.js");
     worker = await createWorker("eng");
     const {
       data: { text },

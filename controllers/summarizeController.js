@@ -1,12 +1,16 @@
-import { summarizeWithGemini } from "../services/summarizerService.js";
-import { saveSummary } from "../services/historyServices.js";
-
 export const summarizeController = async (req, res) => {
   try {
     const { text } = req.body;
     if (!text) {
       return res.status(400).json({ error: "Text is required" });
     }
+
+    // Lazy load services
+    const [{ summarizeWithGemini }, { saveSummary }] =
+      await Promise.all([
+        import("../services/summarizerService.js"),
+        import("../services/historyServices.js"),
+      ]);
 
     const { summary, keyPoints } = await summarizeWithGemini(text);
 
