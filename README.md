@@ -225,7 +225,7 @@ Get user profile (requires authentication)
 ```
 Authorization: Bearer <firebase_id_token>
 ```
-
+ 
 **Response:**
 ```json
 {
