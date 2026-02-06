@@ -2,7 +2,14 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
+import compression from "compression";
 import serverless from "serverless-http";
+import { pathToFileURL } from 'url';
+
+import requestLogger from "./middleware/requestLogger.js";
+import rateLimiter from "./middleware/rateLimiter.js";
+import { logSuccess, logInfo } from "./utils/logger.js";
+import { IS_PRODUCTION } from "./config/constants.js";
 
 // Load environment variables
 dotenv.config();
@@ -10,13 +17,31 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// Security middleware
+// Trust proxy (important for rate limiting and getting real IP)
+app.set('trust proxy', 1);
+
+// Security middleware - must be first
 app.use(helmet({ 
   crossOriginResourcePolicy: { policy: "cross-origin" } 
 }));
 
+// Compression middleware - compress all responses
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6 // Balance between speed and compression ratio
+}));
+
+// Request logging - log all requests
+if (!IS_PRODUCTION || process.env.ENABLE_REQUEST_LOGGING === 'true') {
+  app.use(requestLogger);
+}
+
 // CORS configuration
-const isProd = process.env.NODE_ENV === "production";
 const PROD_ORIGIN = process.env.PROD_ORIGIN || "https://ai-powered-notes-summarizer.vercel.app";
 
 const allowedOrigins = [
@@ -44,6 +69,9 @@ app.use(cors({
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Rate limiting - apply to all routes
+app.use(rateLimiter);
+
 // Helper function to create lazy-loaded route middleware
 // Prevents Firebase initialization during cold starts
 function lazyLoadRoute(importPath) {
@@ -62,8 +90,9 @@ function lazyLoadRoute(importPath) {
 app.get("/", (req, res) => {
   res.json({ 
     status: "API is working",
-    environment: isProd ? "production" : "development",
-    timestamp: new Date().toISOString()
+    environment: IS_PRODUCTION ? "production" : "development",
+    timestamp: new Date().toISOString(),
+    version: "1.0.0"
   });
 });
 
@@ -71,7 +100,8 @@ app.get("/health", (req, res) => {
   res.json({ 
     status: "healthy",
     uptime: process.uptime(),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    memory: process.memoryUsage()
   });
 });
 
@@ -83,9 +113,11 @@ app.use("/api/notes", lazyLoadRoute("./routes/notes.js"));
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ 
+    success: false,
     error: "Route not found",
     path: req.path,
-    method: req.method
+    method: req.method,
+    statusCode: 404
   });
 });
 
@@ -94,27 +126,29 @@ app.use((err, req, res, next) => {
   console.error("❌ Server error:", err);
   
   const statusCode = err.statusCode || 500;
-  const message = isProd ? "Internal server error" : err.message;
+  const message = IS_PRODUCTION ? "Internal server error" : err.message;
   
   res.status(statusCode).json({ 
+    success: false,
     error: message,
-    ...(isProd ? {} : { stack: err.stack })
+    ...(!IS_PRODUCTION && { stack: err.stack }),
+    statusCode
   });
 });
 
 // Local development server (runs when file is executed directly)
 // Vercel will import this file as a module instead
-import { pathToFileURL } from 'url';
-
 const runningAsScript = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (runningAsScript) {
   const PORT = process.env.PORT || 5000;
   
   app.listen(PORT, () => {
-    console.log(`✅ Server running in ${isProd ? 'production' : 'development'} mode`);
-    console.log(`✅ Listening on http://localhost:${PORT}`);
-    console.log(`✅ Press Ctrl+C to stop\n`);
+    logSuccess(`Server started successfully`);
+    logInfo(`Environment: ${IS_PRODUCTION ? 'production' : 'development'}`);
+    logInfo(`Listening on http://localhost:${PORT}`);
+    logInfo(`Health check: http://localhost:${PORT}/health`);
+    logInfo(`Press Ctrl+C to stop\n`);
   });
 }
 

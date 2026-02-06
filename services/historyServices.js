@@ -1,5 +1,6 @@
 // src/services/historyServices.js
 import { db } from "../config/firebase.js";
+import { logError, logSuccess } from "../utils/logger.js";
 
 // Helper to get collection lazily
 const getHistoryCollection = () => {
@@ -22,6 +23,8 @@ export const saveSummary = async (original, summary, keyPoints) => {
       timestamp,
     });
 
+    logSuccess(`Summary saved with ID: ${docRef.id}`);
+
     return {
       id: docRef.id,
       original,
@@ -30,31 +33,57 @@ export const saveSummary = async (original, summary, keyPoints) => {
       timestamp,
     };
   } catch (error) {
-    console.error("Error saving summary:", error);
+    logError("Error saving summary:", error);
     throw error;
   }
 };
 
-// Get all summaries
-export const getHistory = async () => {
+// Get all summaries (with optional pagination)
+export const getHistory = async (page = 1, limit = 10) => {
   try {
     const historyCollection = getHistoryCollection();
-    const snapshot = await historyCollection.orderBy("timestamp", "desc").get();
-    return snapshot.docs.map((doc) => ({
+    
+    // Get total count
+    const countSnapshot = await historyCollection.get();
+    const total = countSnapshot.size;
+    
+    // Get paginated results
+    const snapshot = await historyCollection
+      .orderBy("timestamp", "desc")
+      .limit(limit)
+      .offset((page - 1) * limit)
+      .get();
+    
+    const items = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total
+      }
+    };
   } catch (error) {
-    console.error("Error fetching history:", error);
-    // Return empty array if DB fails (or rethrow if critical)
-    // For now, rethrowing so the frontend sees the error
+    logError("Error fetching history:", error);
     throw error;
   }
 };
 
 // Delete a summary by ID
 export const deleteHistory = async (id) => {
-  const historyCollection = getHistoryCollection();
-  await historyCollection.doc(id).delete();
-  return { success: true };
+  try {
+    const historyCollection = getHistoryCollection();
+    await historyCollection.doc(id).delete();
+    logSuccess(`Summary deleted: ${id}`);
+    return { success: true };
+  } catch (error) {
+    logError("Error deleting summary:", error);
+    throw error;
+  }
 };
