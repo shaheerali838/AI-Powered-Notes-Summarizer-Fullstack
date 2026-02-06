@@ -31,7 +31,9 @@ export const extractTextFromImage = async (buffer) => {
   let worker;
   try {
     const { createWorker } = await import("tesseract.js");
-    worker = await createWorker("eng");
+    worker = await createWorker("eng", 1, {
+      corePath: "https://cdn.jsdelivr.net/npm/tesseract.js-core@v5/tesseract-core.wasm.js",
+    });
     const {
       data: { text },
     } = await worker.recognize(buffer);
@@ -40,7 +42,11 @@ export const extractTextFromImage = async (buffer) => {
     throw new Error(`OCR extraction failed: ${error.message}`);
   } finally {
     if (worker) {
-      await worker.terminate();
+      try {
+        await worker.terminate();
+      } catch (e) {
+        console.error("Error terminating worker:", e);
+      }
     }
   }
 };

@@ -1,11 +1,23 @@
 {
   "version": 2,
+  "buildCommand": "npm install",
   "builds": [
     {
       "src": "index.js",
       "use": "@vercel/node",
       "config": {
-        "maxDuration": 30
+        "maxDuration": 30,
+        "includeFiles": [
+          "**/*.js",
+          "package.json",
+          "config/**",
+          "services/**",
+          "controllers/**",
+          "routes/**",
+          "middleware/**",
+          "middlewares/**",
+          "utils/**"
+        ]
       }
     }
   ],
@@ -15,10 +27,7 @@
       "dest": "/index.js"
     }
   ],
-  "functions": {
-    "index.js": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
+  "env": {
+    "NODE_ENV": "production"
   }
 }
