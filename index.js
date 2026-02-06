@@ -4,9 +4,8 @@ import cors from "cors";
 import helmet from "helmet";
 import serverless from "serverless-http";
 
-import summarizeRoutes from "./routes/summarize.js";
-import historyRoutes from "./routes/history.js";
-import notesRoutes from "./routes/notes.js";
+// ⚠️ DO NOT import routes that depend on Firebase here
+// They will be lazy-loaded to avoid cold start timeouts
 
 dotenv.config();
 
@@ -47,9 +46,23 @@ app.get("/", (req, res) => {
   res.json({ status: "API is working" });
 });
 
-app.use("/api/summarize", summarizeRoutes);
-app.use("/api/history", historyRoutes);
-app.use("/api/notes", notesRoutes);
+// Helper function to create lazy-loaded route middleware
+function lazyLoadRoute(importPath) {
+  let routerCache = null;
+  
+  return async (req, res, next) => {
+    if (!routerCache) {
+      const module = await import(importPath);
+      routerCache = module.default;
+    }
+    return routerCache(req, res, next);
+  };
+}
+
+// Lazy-load routes to avoid Firebase initialization on cold start
+app.use("/api/summarize", lazyLoadRoute("./routes/summarize.js"));
+app.use("/api/history", lazyLoadRoute("./routes/history.js"));
+app.use("/api/notes", lazyLoadRoute("./routes/notes.js"));
 
 app.get("/health", (req, res) => {
   res.json({ status: "healthy" });
