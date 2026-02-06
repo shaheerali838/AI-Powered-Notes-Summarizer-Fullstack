@@ -3,10 +3,11 @@ import { db } from "../config/firebase.js";
 
 // Helper to get collection lazily
 const getHistoryCollection = () => {
-  if (!db) {
+  const database = db();
+  if (!database) {
     throw new Error("Firebase DB is not initialized. Check server logs for credential errors.");
   }
-  return db.collection("history");
+  return database.collection("history");
 };
 
 // Save a new summary

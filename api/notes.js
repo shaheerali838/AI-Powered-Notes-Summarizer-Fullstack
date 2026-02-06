@@ -11,10 +11,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    const decoded = await admin().auth().verifyIdToken(idToken);
     const userId = decoded.uid;
 
-    const notesSnapshot = await db
+    const notesSnapshot = await db()
       .collection("notes")
       .where("userId", "==", userId)
       .get();
