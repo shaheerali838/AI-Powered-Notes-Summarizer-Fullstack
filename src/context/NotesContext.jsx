@@ -277,19 +277,30 @@ export const NotesProvider = ({ children }) => {
       }
 
       // 6. Process Success Response
-      const data = await response.json();
+      const response_data = await response.json();
+
+      // Handle nested response structure (backend returns {success: true, data: {...}})
+      const data = response_data.data || response_data;
+
+      // Validate API response has required fields
+      if (!data.summary || typeof data.summary !== "string") {
+        console.error("Invalid API response:", response_data);
+        throw new Error(
+          "API response is missing the summary field. Please check your backend API.",
+        );
+      }
 
       const summaryData = {
-        originalContent: data.original,
-        summarizedContent: data.summary,
-        keyPoints: data.keyPoints || [],
-        wordCount: data.original ? data.original.split(" ").length : 0,
+        originalContent: originalNotes, // Use the actual user input instead of potentially undefined data.original
+        summarizedContent: data.summary, // Now validated to exist
+        keyPoints: Array.isArray(data.keyPoints) ? data.keyPoints : [],
+        wordCount: originalNotes ? originalNotes.split(" ").length : 0,
       };
 
       setSummaryOutput({
         summary: data.summary,
-        keyPoints: data.keyPoints || [],
-        original: data.original,
+        keyPoints: Array.isArray(data.keyPoints) ? data.keyPoints : [],
+        original: originalNotes, // Use originalNotes instead of data.original
       });
 
       // 7. Save to History
@@ -301,6 +312,11 @@ export const NotesProvider = ({ children }) => {
         }
       } catch (saveError) {
         console.error("Failed to save summary:", saveError);
+        // Don't throw - let the user see their summary even if save fails
+        setError(
+          "Summary generated but failed to save to history: " +
+            saveError.message,
+        );
       }
     } catch (err) {
       // 8. Catch & Display Errors
