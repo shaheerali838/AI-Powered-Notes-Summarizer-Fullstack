@@ -51,6 +51,7 @@ ${text}
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
         },
+        timeout: Number(process.env.OPENROUTER_TIMEOUT_MS || 30000),
       },
     );
 
@@ -71,6 +72,9 @@ ${text}
       keyPoints,
     };
   } catch (error) {
+    if (error.code === "ECONNABORTED") {
+      throw new Error("AI service timeout. Please try again.");
+    }
     console.log(
       "❌ SummarizerService Error: custom!!!",
       error.response?.status,

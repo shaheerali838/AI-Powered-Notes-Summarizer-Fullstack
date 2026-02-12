@@ -46,10 +46,22 @@ export const summarizeController = async (req, res) => {
       import("../services/historyServices.js"),
     ]);
 
-    const { summary, keyPoints } = await summarizeWithGemini(inputText);
+    const summarizeTimeoutMs = Number(process.env.SUMMARIZE_TIMEOUT_MS || 35000);
+    const { summary, keyPoints } = await Promise.race([
+      summarizeWithGemini(inputText),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Summarization timed out")), summarizeTimeoutMs),
+      ),
+    ]);
 
     // Save in Firebase Firestore
-    const saved = await saveSummary(inputText, summary, keyPoints);
+    const saveTimeoutMs = Number(process.env.FIRESTORE_SAVE_TIMEOUT_MS || 10000);
+    const saved = await Promise.race([
+      saveSummary(inputText, summary, keyPoints),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Save timed out")), saveTimeoutMs),
+      ),
+    ]);
 
     res.json({
       success: true,
@@ -62,12 +74,15 @@ export const summarizeController = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("❌ Summarize Controller Error:", err);
-    res.status(500).json({
+    console.error("Summarize Controller Error:", err);
+    const isTimeout = /timed out|timeout/i.test(err.message || "");
+    res.status(isTimeout ? 504 : 500).json({
       success: false,
-      error: "Failed to summarize text",
+      error: isTimeout
+        ? "Request timed out. Please try again."
+        : "Failed to summarize text",
       details: process.env.NODE_ENV !== "production" ? err.message : undefined,
-      statusCode: 500,
+      statusCode: isTimeout ? 504 : 500,
     });
   }
 };

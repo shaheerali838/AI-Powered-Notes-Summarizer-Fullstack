@@ -85,11 +85,15 @@ function lazyLoadRoute(importPath) {
   let routerCache = null;
 
   return async (req, res, next) => {
-    if (!routerCache) {
-      const module = await import(importPath);
-      routerCache = module.default;
+    try {
+      if (!routerCache) {
+        const module = await import(importPath);
+        routerCache = module.default;
+      }
+      return routerCache(req, res, next);
+    } catch (error) {
+      return next(error);
     }
-    return routerCache(req, res, next);
   };
 }
 
@@ -151,12 +155,22 @@ const runningAsScript =
 if (runningAsScript) {
   const PORT = process.env.PORT || 5000;
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     logSuccess(`Server started successfully`);
     logInfo(`Environment: ${IS_PRODUCTION ? "production" : "development"}`);
     logInfo(`Listening on http://localhost:${PORT}`);
     logInfo(`Health check: http://localhost:${PORT}/health`);
     logInfo(`Press Ctrl+C to stop\n`);
+  });
+
+  server.on("error", (error) => {
+    if (error.code === "EADDRINUSE") {
+      console.error(
+        `Port ${PORT} is already in use. Stop the running server and retry.`,
+      );
+      return;
+    }
+    console.error("Server failed to start:", error);
   });
 }
 
