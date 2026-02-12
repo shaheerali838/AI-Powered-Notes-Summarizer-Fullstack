@@ -8,7 +8,10 @@ import { RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX_REQUESTS, ERROR_MESSAGES, HTTP_STA
 const requestCounts = new Map();
 
 // Clean up old entries every 5 minutes
-setInterval(() => {
+// NOTE: In serverless environments (like Vercel), a live interval can keep
+// the event loop active and cause requests to hang. `unref()` lets the
+// runtime finish the request without waiting for this background timer.
+const cleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const [ip, data] of requestCounts.entries()) {
     if (now - data.resetTime > RATE_LIMIT_WINDOW_MS) {
@@ -16,6 +19,10 @@ setInterval(() => {
     }
   }
 }, 5 * 60 * 1000);
+
+if (typeof cleanupInterval.unref === 'function') {
+  cleanupInterval.unref();
+}
 
 /**
  * Rate limiting middleware
