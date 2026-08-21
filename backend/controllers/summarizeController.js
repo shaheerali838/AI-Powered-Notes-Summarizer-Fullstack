@@ -1,4 +1,7 @@
-﻿export const summarizeController = async (req, res) => {
+import { summarizeWithGemini } from "../services/summarizerService.js";
+import { saveSummary } from "../services/historyServices.js";
+
+export const summarizeController = async (req, res) => {
   try {
     const { text, originalContent, tone = "academic", length = "balanced", model } = req.body;
     const inputText = text || originalContent;
@@ -34,11 +37,6 @@
         statusCode: 400,
       });
     }
-
-    const [{ summarizeWithGemini }, { saveSummary }] = await Promise.all([
-      import("../services/summarizerService.js"),
-      import("../services/historyServices.js"),
-    ]);
 
     const summarizeTimeoutMs = Number(process.env.SUMMARIZE_TIMEOUT_MS || 35000);
     const { summary, keyPoints, model: usedModel } = await Promise.race([

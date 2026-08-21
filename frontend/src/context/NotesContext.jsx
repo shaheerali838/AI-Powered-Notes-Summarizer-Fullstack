@@ -1,4 +1,4 @@
-﻿// src/context/NotesContext.jsx
+// src/context/NotesContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import {
@@ -33,7 +33,12 @@ export const NotesProvider = ({ children }) => {
   const { user, isGuest, loading: authLoading } = useAuth();
 
   const rawApiUrl = import.meta.env.VITE_APP_API_URL || "";
-  const API_URL = rawApiUrl.replace(/\/+$/, "");
+  const cleanApiUrl = rawApiUrl.replace(/\/+$/, "");
+  // In production, fallback to relative path if not configured or pointing to localhost
+  const API_URL =
+    import.meta.env.PROD && (cleanApiUrl.includes("localhost") || cleanApiUrl.includes("127.0.0.1"))
+      ? ""
+      : (cleanApiUrl || (import.meta.env.DEV ? "http://localhost:5000" : ""));
 
   // Upload file to backend
   const uploadFile = async (file) => {

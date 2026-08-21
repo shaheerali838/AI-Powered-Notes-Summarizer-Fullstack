@@ -1,30 +1,20 @@
-﻿/**
+import { extractTextFromFile, getFileTypeDescription } from "../services/fileProcessor.js";
+import { summarizeWithGemini } from "../services/summarizerService.js";
+import { saveSummary } from "../services/historyServices.js";
+import { formatFileUploadResponse, formatErrorResponse } from "../utils/responseFormatter.js";
+
+/**
  * Handle file upload and processing
  */
 export const uploadFileController = async (req, res) => {
   try {
     if (!req.file) {
-      const { formatErrorResponse } = await import(
-        "../utils/responseFormatter.js"
-      );
       return res
         .status(400)
         .json(formatErrorResponse("No file uploaded", 400));
     }
 
     const { tone = "academic", length = "balanced", model } = req.body || {};
-
-    const [
-      { extractTextFromFile, getFileTypeDescription },
-      { summarizeWithGemini },
-      { saveSummary },
-      { formatFileUploadResponse, formatErrorResponse },
-    ] = await Promise.all([
-      import("../services/fileProcessor.js"),
-      import("../services/summarizerService.js"),
-      import("../services/historyServices.js"),
-      import("../utils/responseFormatter.js"),
-    ]);
 
     const { originalname, mimetype, size } = req.file;
 

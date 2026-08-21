@@ -103,22 +103,9 @@ app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 // Rate limiting - apply to all routes
 app.use(rateLimiter);
 
-// Helper function to create lazy-loaded route middleware
-function lazyLoadRoute(importPath) {
-  let routerCache = null;
-
-  return async (req, res, next) => {
-    try {
-      if (!routerCache) {
-        const module = await import(importPath);
-        routerCache = module.default;
-      }
-      return routerCache(req, res, next);
-    } catch (error) {
-      return next(error);
-    }
-  };
-}
+import summarizeRoutes from "./routes/summarize.js";
+import historyRoutes from "./routes/history.js";
+import notesRoutes from "./routes/notes.js";
 
 // Health check routes
 app.get("/", (req, res) => {
@@ -139,10 +126,10 @@ app.get("/health", (req, res) => {
   });
 });
 
-// API routes with lazy loading
-app.use("/api/summarize", lazyLoadRoute("./routes/summarize.js"));
-app.use("/api/history", lazyLoadRoute("./routes/history.js"));
-app.use("/api/notes", lazyLoadRoute("./routes/notes.js"));
+// API routes
+app.use("/api/summarize", summarizeRoutes);
+app.use("/api/history", historyRoutes);
+app.use("/api/notes", notesRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -160,7 +147,7 @@ app.use((err, req, res, next) => {
   console.error("❌ Server error:", err);
 
   const statusCode = err.statusCode || 500;
-  const message = IS_PRODUCTION ? "Internal server error" : err.message;
+  const message = err.message || "Internal server error";
 
   res.status(statusCode).json({
     success: false,
