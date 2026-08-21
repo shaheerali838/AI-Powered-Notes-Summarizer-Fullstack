@@ -1,3 +1,21 @@
+﻿import path from "path";
+
+/**
+ * Extract text from Plain Text / Markdown / CSV / RTF / JSON buffer
+ */
+export const extractTextFromPlainText = (buffer) => {
+  try {
+    const raw = buffer.toString("utf-8");
+    // Strip simple RTF header tokens if present
+    if (raw.startsWith("{\\rtf")) {
+      return raw.replace(/\\([a-z]{1,32}[0-9]*|'[\da-f]{2}|[\r\n\t ])|[{}\\]/gi, " ");
+    }
+    return raw;
+  } catch (error) {
+    throw new Error(`Text extraction failed: ${error.message}`);
+  }
+};
+
 /**
  * Extract text from PDF buffer
  */
@@ -45,7 +63,7 @@ export const extractTextFromImage = async (buffer) => {
       try {
         await worker.terminate();
       } catch (e) {
-        console.error("Error terminating worker:", e);
+        console.error("Error terminating OCR worker:", e);
       }
     }
   }
@@ -55,29 +73,41 @@ export const extractTextFromImage = async (buffer) => {
  * Main text extraction function that routes to appropriate extractor
  */
 export const extractTextFromFile = async (file) => {
-  const { buffer, mimetype, originalname } = file;
+  const { buffer, mimetype = "", originalname = "" } = file;
+  const ext = path.extname(originalname).toLowerCase();
 
   try {
     let extractedText = "";
 
-    if (mimetype === "application/pdf") {
+    if (mimetype === "application/pdf" || ext === ".pdf") {
       extractedText = await extractTextFromPDF(buffer);
     } else if (
       mimetype ===
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      mimetype === "application/msword" ||
+      ext === ".docx" ||
+      ext === ".doc"
     ) {
       extractedText = await extractTextFromDOCX(buffer);
-    } else if (mimetype.startsWith("image/")) {
+    } else if (mimetype.startsWith("image/") || [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff"].includes(ext)) {
       extractedText = await extractTextFromImage(buffer);
+    } else if (
+      mimetype.startsWith("text/") ||
+      mimetype === "application/json" ||
+      mimetype === "application/rtf" ||
+      [".txt", ".md", ".rtf", ".csv", ".tsv", ".log", ".json"].includes(ext)
+    ) {
+      extractedText = extractTextFromPlainText(buffer);
     } else {
-      throw new Error("Unsupported file type");
+      // Fallback attempt text decoding
+      extractedText = extractTextFromPlainText(buffer);
     }
 
-    // Clean up extracted text
-    extractedText = extractedText.replace(/\s+/g, " ").trim();
+    // Clean up whitespace while preserving paragraphs
+    extractedText = extractedText.replace(/\r\n/g, "\n").replace(/[ \t]+/g, " ").trim();
 
-    if (!extractedText || extractedText.length < 10) {
-      throw new Error("No meaningful text could be extracted from the file");
+    if (!extractedText || extractedText.length < 5) {
+      throw new Error("No readable text could be extracted from this file.");
     }
 
     return extractedText;
@@ -90,13 +120,23 @@ export const extractTextFromFile = async (file) => {
 /**
  * Get file type description for response
  */
-export const getFileTypeDescription = (mimetype) => {
-  if (mimetype === "application/pdf") return "PDF";
+export const getFileTypeDescription = (mimetype, originalname = "") => {
+  const ext = path.extname(originalname).toLowerCase();
+  if (mimetype === "application/pdf" || ext === ".pdf") return "PDF";
   if (
     mimetype ===
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    mimetype === "application/msword" ||
+    ext === ".docx" ||
+    ext === ".doc"
   )
     return "DOCX";
-  if (mimetype.startsWith("image/")) return "Image";
-  return "Unknown";
+  if (mimetype.startsWith("image/") || [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"].includes(ext))
+    return "Image";
+  if (
+    mimetype.startsWith("text/") ||
+    [".txt", ".md", ".rtf", ".csv", ".tsv", ".log", ".json"].includes(ext)
+  )
+    return "Text Document";
+  return "Document";
 };

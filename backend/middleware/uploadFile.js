@@ -1,66 +1,100 @@
-import multer from "multer";
+﻿import multer from "multer";
 import path from "path";
 
-// Configure storage
+// Configure storage in memory
 const storage = multer.memoryStorage();
 
-// File filter to accept only PDF, DOCX, and Images
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
-    "application/pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/gif",
-    "image/bmp",
-    "image/tiff",
-    "image/webp"
-  ];
+// Allowed file extensions and mimetypes
+const ALLOWED_EXTENSIONS = new Set([
+  ".txt",
+  ".md",
+  ".rtf",
+  ".csv",
+  ".tsv",
+  ".log",
+  ".json",
+  ".pdf",
+  ".docx",
+  ".doc",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".bmp",
+  ".tiff",
+  ".webp",
+]);
 
-  if (allowedTypes.includes(file.mimetype)) {
+const ALLOWED_MIMETYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
+  "text/plain",
+  "text/markdown",
+  "text/csv",
+  "text/rtf",
+  "application/rtf",
+  "text/tab-separated-values",
+  "application/json",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/gif",
+  "image/bmp",
+  "image/tiff",
+  "image/webp",
+]);
+
+const fileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname || "").toLowerCase();
+  const mimetype = file.mimetype;
+
+  if (ALLOWED_MIMETYPES.has(mimetype) || ALLOWED_EXTENSIONS.has(ext)) {
     cb(null, true);
   } else {
-    cb(new Error("Invalid file type. Only PDF, DOCX, and images are allowed."), false);
+    cb(
+      new Error(
+        `Invalid file type (${ext || mimetype}). Supported types: PDF, DOCX, TXT, MD, RTF, CSV, Images.`
+      ),
+      false
+    );
   }
 };
 
-// Configure multer with 10MB limit
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 15 * 1024 * 1024, // 15MB limit
   },
 });
 
-// Error handling middleware
 export const handleUploadError = (error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === "LIMIT_FILE_SIZE") {
       return res.status(400).json({
         success: false,
-        error: "File size too large. Maximum size is 10MB."
+        error: "File size too large. Maximum allowed size is 15MB.",
       });
     }
     if (error.code === "LIMIT_UNEXPECTED_FILE") {
       return res.status(400).json({
         success: false,
-        error: "Unexpected file field."
+        error: "Unexpected file field name in upload request.",
       });
     }
   }
-  
-  if (error.message.includes("Invalid file type")) {
+
+  if (error && error.message) {
     return res.status(400).json({
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 
   return res.status(500).json({
     success: false,
-    error: "File upload failed."
+    error: "File upload failed.",
   });
 };
 

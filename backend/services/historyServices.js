@@ -1,21 +1,34 @@
-// src/services/historyServices.js
+﻿// src/services/historyServices.js
 import { db } from "../config/firebase.js";
-import { logError, logSuccess } from "../utils/logger.js";
+import { logError, logSuccess, logInfo } from "../utils/logger.js";
 
 // Helper to get collection lazily
 const getHistoryCollection = () => {
   const database = db();
   if (!database) {
-    throw new Error("Firebase DB is not initialized. Check server logs for credential errors.");
+    return null;
   }
   return database.collection("history");
 };
 
 // Save a new summary
 export const saveSummary = async (original, summary, keyPoints) => {
+  const timestamp = new Date().toISOString();
+  const fallbackId = Date.now().toString();
+
   try {
     const historyCollection = getHistoryCollection();
-    const timestamp = new Date().toISOString();
+    if (!historyCollection) {
+      logInfo("Firebase DB is not initialized. Summary returned without server-side persistence.");
+      return {
+        id: fallbackId,
+        original,
+        summary,
+        keyPoints,
+        timestamp,
+      };
+    }
+
     const docRef = await historyCollection.add({
       original,
       summary,
@@ -33,8 +46,14 @@ export const saveSummary = async (original, summary, keyPoints) => {
       timestamp,
     };
   } catch (error) {
-    logError("Error saving summary:", error);
-    throw error;
+    logError("Error saving summary to Firestore:", error);
+    return {
+      id: fallbackId,
+      original,
+      summary,
+      keyPoints,
+      timestamp,
+    };
   }
 };
 
@@ -42,6 +61,18 @@ export const saveSummary = async (original, summary, keyPoints) => {
 export const getHistory = async (page = 1, limit = 10) => {
   try {
     const historyCollection = getHistoryCollection();
+    if (!historyCollection) {
+      return {
+        items: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+          hasMore: false,
+        },
+      };
+    }
     
     // Get total count
     const countSnapshot = await historyCollection.get();
@@ -66,12 +97,21 @@ export const getHistory = async (page = 1, limit = 10) => {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
-        hasMore: page * limit < total
-      }
+        hasMore: page * limit < total,
+      },
     };
   } catch (error) {
     logError("Error fetching history:", error);
-    throw error;
+    return {
+      items: [],
+      pagination: {
+        page,
+        limit,
+        total: 0,
+        totalPages: 0,
+        hasMore: false,
+      },
+    };
   }
 };
 
@@ -79,11 +119,14 @@ export const getHistory = async (page = 1, limit = 10) => {
 export const deleteHistory = async (id) => {
   try {
     const historyCollection = getHistoryCollection();
+    if (!historyCollection) {
+      return { success: true };
+    }
     await historyCollection.doc(id).delete();
     logSuccess(`Summary deleted: ${id}`);
     return { success: true };
   } catch (error) {
     logError("Error deleting summary:", error);
-    throw error;
+    return { success: false, error: error.message };
   }
 };

@@ -1,18 +1,20 @@
-import express from "express";
+﻿import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import serverless from "serverless-http";
-import { pathToFileURL } from "url";
+import path from "path";
+import { fileURLToPath, pathToFileURL } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, ".env") });
+dotenv.config();
 
 import requestLogger from "./middleware/requestLogger.js";
 import rateLimiter from "./middleware/rateLimiter.js";
 import { logSuccess, logInfo } from "./utils/logger.js";
 import { IS_PRODUCTION } from "./config/constants.js";
-
-// Load environment variables
-dotenv.config();
 
 // Initialize Express app
 const app = express();
@@ -36,7 +38,7 @@ app.use(
       }
       return compression.filter(req, res);
     },
-    level: 6, // Balance between speed and compression ratio
+    level: 6,
   }),
 );
 
@@ -73,14 +75,13 @@ app.use(
 );
 
 // Body parsing middleware
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 // Rate limiting - apply to all routes
 app.use(rateLimiter);
 
 // Helper function to create lazy-loaded route middleware
-// Prevents Firebase initialization during cold starts
 function lazyLoadRoute(importPath) {
   let routerCache = null;
 
@@ -116,7 +117,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-// API routes with lazy loading (Firebase initialization on first access only)
+// API routes with lazy loading
 app.use("/api/summarize", lazyLoadRoute("./routes/summarize.js"));
 app.use("/api/history", lazyLoadRoute("./routes/history.js"));
 app.use("/api/notes", lazyLoadRoute("./routes/notes.js"));
@@ -147,8 +148,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Local development server (runs when file is executed directly)
-// Vercel will import this file as a module instead
+// Local development server
 const runningAsScript =
   process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 

@@ -1,64 +1,57 @@
-﻿import axios from "axios";
+﻿import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 dotenv.config();
 
-if (!process.env.OPENROUTER_API_KEY) {
-  console.error("OPENROUTER_API_KEY is not set in environment variables");
-}
-
 export async function summarizeWithGemini(text) {
-  try {
-    const prompt = `
-You are a professional note summarizer. Convert any text into clear, concise, and highly professional study notes. Follow these rules exactly:
-
-1. Produce a Summary paragraph:
-   - Start directly with the word "Summary" on its own line.
-   - Write the main ideas clearly and professionally.
-   - Keep sentences concise and easy to understand.
-   - Do not include extra symbols, markdown characters, or unnecessary headings.
-   - Do not use bold, italics, asterisks, bullets, or hashes anywhere.
-
-2. Produce Key Points in a numbered, hierarchical format:
-   - Start directly with the word "Key Points" on its own line.
-   - Use numbers for main points (1., 2., 3., ...).
-   - For sub-points, use nested numbering (1.1, 1.2, 1.2.1, 1.2.2, ...) to indicate hierarchy.
-   - Indent each level of sub-points by two spaces per level.
-   - Each point must be short, meaningful, and directly from the text.
-   - Do not use bold, italics, asterisks, bullets, or hashes anywhere.
-
-3. Do not add any introductory text like "Here are the summaries" or "Based on your text".
-
-Text to summarize:  
-${text}
-`;
-
-    const response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        model: "deepseek/deepseek-chat",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        max_tokens: 2000,
-        temperature: 0.7,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        timeout: Number(process.env.OPENROUTER_TIMEOUT_MS || 30000),
-      },
+  const currentKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!currentKey) {
+    throw new Error(
+      "GEMINI_API_KEY is not configured. Please set it in your backend .env file.",
     );
+  }
 
-    const rawText = response.data.choices[0].message.content;
+  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+  try {
+    const prompt = `You are an expert academic summarizer. Your task is to extract the core ideas from the provided text and convert them into highly structured, professional study notes.
+
+CRITICAL CONSTRAINTS:
+- ZERO MARKDOWN: Absolutely no bold (**), italics (*), hashes (#), or bullet points (-) are allowed anywhere in your output. Use plain text only.
+- ZERO FILLER: Do not include conversational filler, introductions, or conclusions (e.g., "Here is the summary"). 
+
+OUTPUT TEMPLATE:
+You must strictly follow this exact format and spacing:
+
+Summary
+[Write a single, concise paragraph capturing the main ideas. Keep sentences professional and easy to understand.]
+
+Key Points
+1. [Main point 1]
+  1.1 [Sub-point 1 - indented with exactly 2 spaces]
+  1.2 [Sub-point 2 - indented with exactly 2 spaces]
+    1.2.1 [Nested sub-point - indented with exactly 4 spaces]
+2. [Main point 2]
+  2.1 [Sub-point 1]
+
+Text to summarize:
+${text}`;
+
+    const client = new GoogleGenAI({ apiKey: currentKey });
+    const response = await client.models.generateContent({
+      model: modelName,
+      contents: prompt,
+    });
+
+    const rawText = response.text || "";
     const [summaryPart, keyPointsPart] = rawText.split("Key Points");
 
-    const summary = summaryPart?.replace("Summary", "").trim() || "No summary";
+    const summary =
+      summaryPart?.replace(/Summary/i, "").trim() || "No summary available";
     const keyPoints = keyPointsPart
       ? keyPointsPart
           .split("\n")
@@ -72,15 +65,12 @@ ${text}
       keyPoints,
     };
   } catch (error) {
-    if (error.code === "ECONNABORTED") {
-      throw new Error("AI service timeout. Please try again.");
-    }
-    console.log(
-      "❌ SummarizerService Error: custom!!!",
-      error.response?.status,
-
-      error.response?.data || error.message,
+    console.error(
+      "❌ Gemini Summarizer Service Error:",
+      error.message || error,
     );
-    throw error;
+    throw new Error(
+      `AI Summarization failed: ${error.message || "Unknown error"}`,
+    );
   }
 }

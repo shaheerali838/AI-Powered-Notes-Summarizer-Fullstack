@@ -1,4 +1,4 @@
-export const summarizeController = async (req, res) => {
+﻿export const summarizeController = async (req, res) => {
   try {
     // Accept both 'text' and 'originalContent' for backward compatibility
     const { text, originalContent } = req.body;
@@ -54,23 +54,32 @@ export const summarizeController = async (req, res) => {
       ),
     ]);
 
-    // Save in Firebase Firestore
-    const saveTimeoutMs = Number(process.env.FIRESTORE_SAVE_TIMEOUT_MS || 10000);
-    const saved = await Promise.race([
-      saveSummary(inputText, summary, keyPoints),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Save timed out")), saveTimeoutMs),
-      ),
-    ]);
+    // Optional background/server save (does not crash summarization if disabled or failing)
+    let saved = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      const saveTimeoutMs = Number(process.env.FIRESTORE_SAVE_TIMEOUT_MS || 5000);
+      saved = await Promise.race([
+        saveSummary(inputText, summary, keyPoints),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Save timed out")), saveTimeoutMs),
+        ),
+      ]);
+    } catch (saveErr) {
+      console.warn("⚠️ Server-side history save skipped/failed:", saveErr.message);
+    }
 
     res.json({
       success: true,
       data: {
-        id: saved.id,
-        originalContent: inputText, // Changed from 'original' to match frontend expectations
+        id: saved?.id || Date.now().toString(),
+        originalContent: inputText,
         summary,
-        keyPoints,
-        timestamp: saved.timestamp,
+        keyPoints: keyPoints || [],
+        timestamp: saved?.timestamp || new Date().toISOString(),
       },
     });
   } catch (err) {
@@ -80,7 +89,7 @@ export const summarizeController = async (req, res) => {
       success: false,
       error: isTimeout
         ? "Request timed out. Please try again."
-        : "Failed to summarize text",
+        : `Failed to summarize text: ${err.message}`,
       details: process.env.NODE_ENV !== "production" ? err.message : undefined,
       statusCode: isTimeout ? 504 : 500,
     });

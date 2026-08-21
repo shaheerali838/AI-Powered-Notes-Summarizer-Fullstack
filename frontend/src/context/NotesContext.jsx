@@ -1,4 +1,4 @@
-// src/context/NotesContext.jsx
+﻿// src/context/NotesContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import {
@@ -32,8 +32,6 @@ export const NotesProvider = ({ children }) => {
   const [error, setError] = useState("");
   const { user, isGuest, loading: authLoading } = useAuth();
 
-  // FIX 1: Change default from "/api" to "" (empty string)
-  // This prevents the double "/api/api" issue locally
   const rawApiUrl = import.meta.env.VITE_APP_API_URL || "";
   const API_URL = rawApiUrl.replace(/\/+$/, "");
 
@@ -57,12 +55,11 @@ export const NotesProvider = ({ children }) => {
         }
       }
 
-      // Simulate progress for better UX
+      // Simulate progress for smooth UX
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
 
-      // FIX 2: Added "/api" prefix here to match backend route
       const response = await fetch(`${API_URL}/api/notes/upload`, {
         method: "POST",
         headers,
@@ -74,24 +71,35 @@ export const NotesProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to upload file");
+        throw new Error(errorData.error || errorData.message || "Failed to upload file");
       }
 
-      const data = await response.json();
+      const responseJson = await response.json();
+      const data = responseJson.data || responseJson;
+
+      const extracted = data.extractedText || "";
+      const summaryText = data.summary || "";
+      const points = Array.isArray(data.keyPoints) ? data.keyPoints : [];
 
       // Store the uploaded note data
       const noteData = {
         id: Date.now().toString(),
-        filename: data.filename,
-        extractedText: data.extractedText,
-        summary: data.summary,
-        keyPoints: data.keyPoints || [],
+        filename: data.filename || file.name,
+        extractedText: extracted,
+        summary: summaryText,
+        keyPoints: points,
         uploadedAt: new Date(),
-        fileType: file.type,
+        fileType: file.type || file.name.split(".").pop(),
         fileSize: file.size,
       };
 
       setCurrentNote(noteData);
+      setOriginalNotes(extracted);
+      setSummaryOutput({
+        summary: summaryText,
+        keyPoints: points,
+        original: extracted,
+      });
 
       // Add to uploaded notes history
       setUploadedNotes((prev) => [noteData, ...prev]);
@@ -100,20 +108,20 @@ export const NotesProvider = ({ children }) => {
       try {
         if (user && !isGuest) {
           await saveSummaryToFirestore({
-            originalContent: data.extractedText,
-            summarizedContent: data.summary,
-            keyPoints: data.keyPoints || [],
-            filename: data.filename,
-            fileType: file.type,
+            originalContent: extracted,
+            summarizedContent: summaryText,
+            keyPoints: points,
+            filename: data.filename || file.name,
+            fileType: file.type || file.name.split(".").pop(),
             fileSize: file.size,
           });
         } else {
           saveSummaryToSessionStorage({
-            originalContent: data.extractedText,
-            summarizedContent: data.summary,
-            keyPoints: data.keyPoints || [],
-            filename: data.filename,
-            fileType: file.type,
+            originalContent: extracted,
+            summarizedContent: summaryText,
+            keyPoints: points,
+            filename: data.filename || file.name,
+            fileType: file.type || file.name.split(".").pop(),
             fileSize: file.size,
           });
           fetchHistoryFromSessionStorage();
@@ -122,7 +130,7 @@ export const NotesProvider = ({ children }) => {
         console.error("Failed to save uploaded note:", saveError);
       }
 
-      return { success: true, data };
+      return { success: true, data: { ...data, extractedText: extracted } };
     } catch (err) {
       setError(err.message);
       console.error("Upload Error:", err);
@@ -254,9 +262,7 @@ export const NotesProvider = ({ children }) => {
         }
       }
 
-      // 4. API Call (Corrected URL)
-      // Your backend routes are served at /api/summarize
-      // We ensure the URL includes /api/summarize
+      // 4. API Call
       const response = await fetch(`${API_URL}/api/summarize`, {
         method: "POST",
         headers,
@@ -278,11 +284,8 @@ export const NotesProvider = ({ children }) => {
 
       // 6. Process Success Response
       const response_data = await response.json();
-
-      // Handle nested response structure (backend returns {success: true, data: {...}})
       const data = response_data.data || response_data;
 
-      // Validate API response has required fields
       if (!data.summary || typeof data.summary !== "string") {
         console.error("Invalid API response:", response_data);
         throw new Error(
@@ -291,16 +294,16 @@ export const NotesProvider = ({ children }) => {
       }
 
       const summaryData = {
-        originalContent: originalNotes, // Use the actual user input instead of potentially undefined data.original
-        summarizedContent: data.summary, // Now validated to exist
+        originalContent: originalNotes,
+        summarizedContent: data.summary,
         keyPoints: Array.isArray(data.keyPoints) ? data.keyPoints : [],
-        wordCount: originalNotes ? originalNotes.split(" ").length : 0,
+        wordCount: originalNotes ? originalNotes.split(/\s+/).filter(Boolean).length : 0,
       };
 
       setSummaryOutput({
         summary: data.summary,
         keyPoints: Array.isArray(data.keyPoints) ? data.keyPoints : [],
-        original: originalNotes, // Use originalNotes instead of data.original
+        original: originalNotes,
       });
 
       // 7. Save to History
@@ -312,18 +315,15 @@ export const NotesProvider = ({ children }) => {
         }
       } catch (saveError) {
         console.error("Failed to save summary:", saveError);
-        // Don't throw - let the user see their summary even if save fails
         setError(
           "Summary generated but failed to save to history: " +
             saveError.message,
         );
       }
     } catch (err) {
-      // 8. Catch & Display Errors
       setError(err.message);
       console.error("API Error:", err);
     } finally {
-      // 9. Cleanup
       setIsGenerating(false);
     }
   };

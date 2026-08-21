@@ -1,8 +1,9 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+﻿import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import HomePage from "./pages/HomePage";
 import HistoryPage from "./pages/HistoryPage";
 import AboutPage from "./pages/AboutPage";
+import SettingsPage from "./pages/SettingsPage";
 import { NotesProvider } from "./context/NotesContext";
 import { UIProvider } from "./context/UIContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -18,6 +19,7 @@ function App() {
                 <Route index element={<HomePage />} />
                 <Route path="history" element={<HistoryPage />} />
                 <Route path="about" element={<AboutPage />} />
+                <Route path="settings" element={<SettingsPage />} />
               </Route>
             </Routes>
           </Router>

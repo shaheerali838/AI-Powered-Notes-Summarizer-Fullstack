@@ -1,4 +1,4 @@
-import admin from "firebase-admin";
+﻿import admin from "firebase-admin";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -8,14 +8,15 @@ let dbInstance = null;
 
 function initializeFirebase() {
   if (isInitialized) {
-    return;
+    return dbInstance;
   }
 
   if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_PROJECT_ID) {
-    console.error(
-      "❌ MISSING ENV VARIABLES: Check FIREBASE_PRIVATE_KEY and FIREBASE_PROJECT_ID in your .env file."
+    console.warn(
+      "⚠️ Firebase Admin credentials not fully configured in .env. Server-side Firestore history will be disabled (client Firestore remains active)."
     );
-    throw new Error("Firebase credentials not configured");
+    isInitialized = true;
+    return null;
   }
 
   let privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
@@ -28,8 +29,8 @@ function initializeFirebase() {
       privateKey = privateKey.slice(1, -1);
     }
   } else {
-    console.error("❌ FIREBASE_PRIVATE_KEY is missing or empty.");
-    throw new Error("Firebase private key not configured");
+    isInitialized = true;
+    return null;
   }
 
   if (!admin.apps.length) {
@@ -43,13 +44,20 @@ function initializeFirebase() {
       });
       console.log("✅ Firebase Admin initialized successfully");
     } catch (error) {
-      console.error("❌ Firebase Admin initialization error:", error.message);
-      throw error;
+      console.warn("⚠️ Firebase Admin initialization failed:", error.message);
+      isInitialized = true;
+      return null;
     }
   }
 
-  dbInstance = admin.firestore();
+  try {
+    dbInstance = admin.firestore();
+  } catch (err) {
+    console.warn("⚠️ Firestore instance creation failed:", err.message);
+  }
+
   isInitialized = true;
+  return dbInstance;
 }
 
 function getDb() {
@@ -63,7 +71,7 @@ function getAdmin() {
   if (!isInitialized) {
     initializeFirebase();
   }
-  return admin;
+  return admin.apps.length ? admin : null;
 }
 
 export { getAdmin as admin, getDb as db };
