@@ -1,4 +1,4 @@
-﻿import { Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import { useUI } from "../context/UIContext";
@@ -7,7 +7,7 @@ const Layout = () => {
   const { sidebarExpanded, isMobile } = useUI();
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-slate-50 flex flex-col antialiased">
+    <div className="h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased transition-colors duration-200">
       {/* 1. Fixed Top Navbar */}
       <Navbar />
 

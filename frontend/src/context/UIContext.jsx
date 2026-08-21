@@ -1,4 +1,4 @@
-﻿import { createContext, useState, useContext, useEffect } from "react";
+import { createContext, useState, useContext, useEffect } from "react";
 
 const UIContext = createContext();
 
@@ -12,6 +12,34 @@ export const UIProvider = ({ children }) => {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [theme, setThemeState] = useState(() => {
+    const saved = localStorage.getItem("app_theme");
+    if (saved === "dark" || saved === "light") return saved;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  });
+
+  // Synchronize theme with DOM documentElement and localStorage
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("app_theme", theme);
+  }, [theme]);
+
+  const setTheme = (newTheme) => {
+    if (newTheme === "dark" || newTheme === "light") {
+      setThemeState(newTheme);
+    }
+  };
+
+  const toggleTheme = () => {
+    setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   useEffect(() => {
     const checkBreakpoints = () => {
@@ -60,6 +88,10 @@ export const UIProvider = ({ children }) => {
         setHistoryExpanded,
         toggleHistory,
         isMobile,
+        theme,
+        setTheme,
+        toggleTheme,
+        isDark: theme === "dark",
       }}
     >
       {children}

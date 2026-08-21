@@ -1,6 +1,7 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNotes } from "../context/NotesContext";
+import { useUI } from "../context/UIContext";
 import {
   User,
   Sparkles,
@@ -13,12 +14,16 @@ import {
   SlidersHorizontal,
   AlertTriangle,
   Cpu,
+  Sun,
+  Moon,
+  Palette,
 } from "lucide-react";
 import { updateProfile } from "firebase/auth";
 
 const SettingsPage = () => {
   const { user, isGuest, openAuthModal } = useAuth();
   const { summaryHistory, deleteSummary, clearNotes } = useNotes();
+  const { theme, setTheme } = useUI();
 
   // Profile Edit State
   const [displayName, setDisplayName] = useState(user?.displayName || "");
@@ -183,30 +188,30 @@ const SettingsPage = () => {
         </div>
 
         {/* ========================================================================= */}
-        {/* 1. USER ACCOUNT & PROFILE                                                 */}
+        {/* 1. PROFILE & ACCOUNT SETTINGS                                             */}
         {/* ========================================================================= */}
-        <section className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-5 sm:p-6 space-y-5 transition-colors">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+              <div className="p-2 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl">
                 <User className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm sm:text-base font-bold text-slate-800">
+                <h2 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">
                   Account & Profile
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   Manage your personal details and cloud synchronization.
                 </p>
               </div>
             </div>
 
             {isGuest ? (
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
                 Guest Mode
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>Cloud Synced</span>
               </span>
@@ -215,7 +220,7 @@ const SettingsPage = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
                 Display Name
               </label>
               {user && !isGuest ? (
@@ -225,7 +230,7 @@ const SettingsPage = () => {
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Enter your name"
-                    className="flex-1 px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
+                    className="flex-1 px-3.5 py-2 text-sm bg-slate-50 dark:bg-slate-950/60 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
                   />
                   <button
                     type="submit"
@@ -240,31 +245,31 @@ const SettingsPage = () => {
                   type="text"
                   disabled
                   value="Guest User"
-                  className="w-full px-3.5 py-2 text-sm bg-slate-100 text-slate-500 border border-slate-200 rounded-xl cursor-not-allowed"
+                  className="w-full px-3.5 py-2 text-sm bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl cursor-not-allowed"
                 />
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
                 Email Address
               </label>
               <input
                 type="text"
                 disabled
                 value={isGuest ? "Not configured (Anonymous)" : user?.email || "N/A"}
-                className="w-full px-3.5 py-2 text-sm bg-slate-100 text-slate-500 border border-slate-200 rounded-xl cursor-not-allowed"
+                className="w-full px-3.5 py-2 text-sm bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl cursor-not-allowed"
               />
             </div>
           </div>
 
           {isGuest && (
-            <div className="p-4 bg-amber-50/70 border border-amber-200/80 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold text-amber-900">
+                <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
                   Sync summaries across all your devices
                 </p>
-                <p className="text-3xs text-amber-700 mt-0.5">
+                <p className="text-3xs text-amber-700 dark:text-amber-400 mt-0.5">
                   Guest notes are stored locally in your browser. Sign in to save unlimited study notes permanently.
                 </p>
               </div>
@@ -281,23 +286,23 @@ const SettingsPage = () => {
         {/* ========================================================================= */}
         {/* 2. AI MODEL & SUMMARIZER ENGINE PREFERENCES                               */}
         {/* ========================================================================= */}
-        <section className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-5 sm:p-6 space-y-5 transition-colors">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+              <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm sm:text-base font-bold text-slate-800">
+                <h2 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">
                   AI Summarizer Preferences
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   Configure output depth, tone, and underlying Gemini model.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 border border-indigo-200/70 rounded-xl text-2xs font-bold text-indigo-700">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/70 dark:border-indigo-800/60 rounded-xl text-2xs font-bold text-indigo-700 dark:text-indigo-300">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>{geminiModel}</span>
             </div>
@@ -306,8 +311,8 @@ const SettingsPage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* AI Model Selector */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5 text-blue-600" />
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <span>AI Engine Model</span>
               </label>
               <select
@@ -315,7 +320,7 @@ const SettingsPage = () => {
                 onChange={(e) =>
                   handleSavePref("pref_gemini_model", e.target.value, setGeminiModel)
                 }
-                className="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition cursor-pointer"
+                className="w-full px-3 py-2 text-xs font-medium bg-slate-50 dark:bg-slate-950/60 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition cursor-pointer"
               >
                 <option value="gemini-3.5-flash-lite">
                   Gemini 3.5 Flash Lite (Recommended)
@@ -327,14 +332,14 @@ const SettingsPage = () => {
                   Gemini 2.5 Flash (Standard)
                 </option>
               </select>
-              <p className="text-3xs text-slate-400 mt-1">
+              <p className="text-3xs text-slate-400 dark:text-slate-500 mt-1">
                 Powered by Google AI Studio API key.
               </p>
             </div>
 
             {/* Tone of Voice */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Output Tone & Style
               </label>
               <select
@@ -342,20 +347,20 @@ const SettingsPage = () => {
                 onChange={(e) =>
                   handleSavePref("pref_summary_tone", e.target.value, setSummaryTone)
                 }
-                className="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition cursor-pointer"
+                className="w-full px-3 py-2 text-xs font-medium bg-slate-50 dark:bg-slate-950/60 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition cursor-pointer"
               >
                 <option value="academic">Academic & Study Notes</option>
                 <option value="executive">Executive Brief (High Level)</option>
                 <option value="simple">Simple & Plain English</option>
               </select>
-              <p className="text-3xs text-slate-400 mt-1">
+              <p className="text-3xs text-slate-400 dark:text-slate-500 mt-1">
                 Linguistic style and vocabulary.
               </p>
             </div>
 
             {/* Summary Length / Detail Level */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Detail & Depth
               </label>
               <select
@@ -363,13 +368,13 @@ const SettingsPage = () => {
                 onChange={(e) =>
                   handleSavePref("pref_summary_length", e.target.value, setSummaryLength)
                 }
-                className="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition cursor-pointer"
+                className="w-full px-3 py-2 text-xs font-medium bg-slate-50 dark:bg-slate-950/60 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition cursor-pointer"
               >
                 <option value="concise">Concise (3-5 core takeaways)</option>
                 <option value="balanced">Balanced (Standard)</option>
                 <option value="deep">Comprehensive (Deep Breakdown)</option>
               </select>
-              <p className="text-3xs text-slate-400 mt-1">
+              <p className="text-3xs text-slate-400 dark:text-slate-500 mt-1">
                 Density of sub-points and explanations.
               </p>
             </div>
@@ -379,29 +384,29 @@ const SettingsPage = () => {
         {/* ========================================================================= */}
         {/* 3. WORKSPACE & EDITOR BEHAVIORS                                           */}
         {/* ========================================================================= */}
-        <section className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3.5">
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-5 sm:p-6 space-y-4 transition-colors">
+          <div className="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-800 pb-3.5">
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
               <SlidersHorizontal className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-800">
+              <h2 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">
                 Workspace Behaviors
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 Editor ergonomics and UI enhancements.
               </p>
             </div>
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {/* Auto Copy Toggle */}
             <div className="py-3 flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100">
                   Auto-Copy to Clipboard
                 </p>
-                <p className="text-3xs sm:text-xs text-slate-400">
+                <p className="text-3xs sm:text-xs text-slate-400 dark:text-slate-500">
                   Automatically copy the generated summary when AI generation completes.
                 </p>
               </div>
@@ -410,7 +415,7 @@ const SettingsPage = () => {
                   handleSavePref("pref_auto_copy", String(!autoCopy), setAutoCopy)
                 }
                 className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
-                  autoCopy ? "bg-blue-600" : "bg-slate-300"
+                  autoCopy ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"
                 }`}
               >
                 <div
@@ -424,10 +429,10 @@ const SettingsPage = () => {
             {/* Show Reduction Metrics */}
             <div className="py-3 flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100">
                   Show Compression & Reduction Stats
                 </p>
-                <p className="text-3xs sm:text-xs text-slate-400">
+                <p className="text-3xs sm:text-xs text-slate-400 dark:text-slate-500">
                   Display the "X% shorter" metric badge on the summary output header.
                 </p>
               </div>
@@ -436,7 +441,7 @@ const SettingsPage = () => {
                   handleSavePref("pref_show_metrics", String(!showMetrics), setShowMetrics)
                 }
                 className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
-                  showMetrics ? "bg-blue-600" : "bg-slate-300"
+                  showMetrics ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"
                 }`}
               >
                 <div
@@ -450,21 +455,96 @@ const SettingsPage = () => {
         </section>
 
         {/* ========================================================================= */}
-        {/* 4. DATA EXPORT & HISTORY MANAGEMENT                                       */}
+        {/* 4. APPEARANCE & THEME PREFERENCES                                         */}
         {/* ========================================================================= */}
-        <section className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-5 sm:p-6 space-y-4 transition-colors">
+          <div className="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-800 pb-3.5">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+              <Palette className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">
+                Appearance & Theme
+              </h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Select your preferred color theme for comfortable study sessions.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Light Mode Selection Card */}
+            <button
+              type="button"
+              onClick={() => {
+                setTheme("light");
+                showToast("Light theme selected");
+              }}
+              className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer text-left ${
+                theme === "light"
+                  ? "border-blue-600 bg-blue-50/60 text-blue-950 shadow-xs"
+                  : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                  <Sun className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Light Mode</p>
+                  <p className="text-3xs text-slate-500 dark:text-slate-400">
+                    Crisp, clean light appearance
+                  </p>
+                </div>
+              </div>
+              {theme === "light" && <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />}
+            </button>
+
+            {/* Dark Mode Selection Card */}
+            <button
+              type="button"
+              onClick={() => {
+                setTheme("dark");
+                showToast("Dark theme selected");
+              }}
+              className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer text-left ${
+                theme === "dark"
+                  ? "border-blue-500 bg-blue-950/40 text-blue-200 shadow-xs"
+                  : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-800 text-amber-300 flex items-center justify-center flex-shrink-0 border border-slate-700">
+                  <Moon className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Dark Mode</p>
+                  <p className="text-3xs text-slate-500 dark:text-slate-400">
+                    Sleek, low-glare dark appearance
+                  </p>
+                </div>
+              </div>
+              {theme === "dark" && <Check className="w-5 h-5 text-blue-400 flex-shrink-0" />}
+            </button>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* 5. DATA EXPORT & HISTORY MANAGEMENT                                       */}
+        {/* ========================================================================= */}
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-5 sm:p-6 space-y-5 transition-colors">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+              <div className="p-2 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
                 <HardDrive className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm sm:text-base font-bold text-slate-800">
+                <h2 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">
                   Data Backup & Export
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   You have{" "}
-                  <strong className="text-slate-700">
+                  <strong className="text-slate-700 dark:text-slate-300 font-semibold">
                     {summaryHistory.length} saved summaries
                   </strong>{" "}
                   in your history.
@@ -478,16 +558,16 @@ const SettingsPage = () => {
             <button
               onClick={handleExportMarkdown}
               disabled={summaryHistory.length === 0}
-              className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 text-left transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+              className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 text-left transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
             >
-              <div className="p-2.5 bg-slate-100 group-hover:bg-blue-100 text-slate-600 group-hover:text-blue-600 rounded-xl transition">
+              <div className="p-2.5 bg-slate-100 dark:bg-slate-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-950/60 text-slate-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 rounded-xl transition">
                 <FileDown className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-800 group-hover:text-blue-700">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-700 dark:group-hover:text-blue-400">
                   Export Markdown Study Guide (.md)
                 </p>
-                <p className="text-3xs text-slate-400">
+                <p className="text-3xs text-slate-400 dark:text-slate-500">
                   Formatted study notes ready for Obsidian, Notion, or printing.
                 </p>
               </div>
@@ -497,16 +577,16 @@ const SettingsPage = () => {
             <button
               onClick={handleExportData}
               disabled={summaryHistory.length === 0}
-              className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 text-left transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+              className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 text-left transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
             >
-              <div className="p-2.5 bg-slate-100 group-hover:bg-blue-100 text-slate-600 group-hover:text-blue-600 rounded-xl transition">
+              <div className="p-2.5 bg-slate-100 dark:bg-slate-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-950/60 text-slate-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 rounded-xl transition">
                 <Download className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-800 group-hover:text-blue-700">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-700 dark:group-hover:text-blue-400">
                   Export Raw Backup (.json)
                 </p>
-                <p className="text-3xs text-slate-400">
+                <p className="text-3xs text-slate-400 dark:text-slate-500">
                   Complete structured archive of all original and summarized notes.
                 </p>
               </div>
@@ -515,20 +595,20 @@ const SettingsPage = () => {
         </section>
 
         {/* ========================================================================= */}
-        {/* 5. DANGER ZONE                                                            */}
+        {/* 6. DANGER ZONE                                                            */}
         {/* ========================================================================= */}
-        <section className="bg-rose-50/40 rounded-2xl border border-rose-200/70 p-5 sm:p-6 space-y-4">
-          <div className="flex items-center gap-2 text-rose-700">
+        <section className="bg-rose-50/40 dark:bg-rose-950/20 rounded-2xl border border-rose-200/70 dark:border-rose-900/50 p-5 sm:p-6 space-y-4 transition-colors">
+          <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400">
             <AlertTriangle className="w-5 h-5" />
             <h2 className="text-sm sm:text-base font-bold">Danger Zone</h2>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-rose-200/80">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-rose-200/80 dark:border-rose-900/50">
             <div>
-              <p className="text-xs sm:text-sm font-bold text-slate-900">
+              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
                 Clear All Summary History
               </p>
-              <p className="text-3xs sm:text-xs text-slate-400">
+              <p className="text-3xs sm:text-xs text-slate-400 dark:text-slate-500">
                 Permanently delete all {summaryHistory.length} saved summaries. This action cannot be undone.
               </p>
             </div>
@@ -546,23 +626,23 @@ const SettingsPage = () => {
 
       {/* Delete All Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 border border-slate-200 shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
             <div className="text-center">
-              <h3 className="text-base font-bold text-slate-900">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 Delete All Summaries?
               </h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Are you sure you want to delete all {summaryHistory.length} saved summaries? This will permanently wipe them.
               </p>
             </div>
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+                className="flex-1 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
               >
                 Cancel
               </button>
