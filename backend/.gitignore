@@ -1,5 +1,9 @@
 .env
+.env.local
+.env.*.local
 node_modules
-/.env.production
-.env.example
-ai-notes-summarize-firebase-adminsdk-fbsvc-d20d15ee76.json
+*.log
+npm-debug.log*
+*.json.secret
+*firebase-adminsdk*.json
+.DS_Store

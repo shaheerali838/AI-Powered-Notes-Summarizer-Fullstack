@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
@@ -51,17 +51,39 @@ if (!IS_PRODUCTION || process.env.ENABLE_REQUEST_LOGGING === "true") {
 const PROD_ORIGIN =
   process.env.PROD_ORIGIN || "https://ai-powered-notes-summarizer.vercel.app";
 
+const configuredOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 const allowedOrigins = [
   PROD_ORIGIN,
   "https://ai-powered-notes-summarizer.vercel.app",
   "http://localhost:5173",
   "http://localhost:5000",
   "http://localhost:3000",
+  ...configuredOrigins,
 ];
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, server-to-server, same-origin)
+      if (!origin) return callback(null, true);
+
+      // Allow exact match in allowed list
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      // Allow any Vercel deployment domain (*.vercel.app)
+      if (/\.vercel\.app$/.test(origin)) return callback(null, true);
+
+      // Allow localhost with any port in development
+      if (/^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: [
@@ -175,5 +197,5 @@ if (runningAsScript) {
 }
 
 // Export for Vercel serverless deployment
-export default serverless(app);
+export default app;
 export { app };
