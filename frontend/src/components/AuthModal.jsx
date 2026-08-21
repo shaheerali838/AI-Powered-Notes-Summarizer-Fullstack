@@ -37,6 +37,42 @@ const AuthModal = () => {
     closeAuthModal();
   };
 
+  const formatAuthError = (err) => {
+    const code = err?.code || "";
+    const msg = err?.message || "";
+
+    if (code === "auth/email-already-in-use" || msg.includes("email-already-in-use")) {
+      return "An account with this email already exists. Please sign in instead.";
+    }
+    if (
+      code === "auth/invalid-credential" ||
+      code === "auth/wrong-password" ||
+      code === "auth/user-not-found" ||
+      msg.includes("invalid-credential")
+    ) {
+      return "Invalid email or password. Please check your credentials and try again.";
+    }
+    if (code === "auth/weak-password" || msg.includes("weak-password")) {
+      return "Password must be at least 6 characters long.";
+    }
+    if (code === "auth/invalid-email" || msg.includes("invalid-email")) {
+      return "Please enter a valid email address.";
+    }
+    if (code === "auth/popup-closed-by-user" || msg.includes("popup-closed-by-user")) {
+      return "Sign-in cancelled (popup was closed).";
+    }
+    if (code === "auth/too-many-requests" || msg.includes("too-many-requests")) {
+      return "Too many failed attempts. Please wait a few moments and try again.";
+    }
+    if (code === "auth/network-request-failed" || msg.includes("network-request-failed")) {
+      return "Network error. Please check your internet connection.";
+    }
+    return (
+      msg.replace(/^Firebase:\s*/i, "").replace(/\s*\(auth\/[^)]+\)\.?$/i, "") ||
+      "Authentication failed. Please try again."
+    );
+  };
+
   const handleEmailAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -50,7 +86,7 @@ const AuthModal = () => {
       }
       handleClose();
     } catch (error) {
-      setError(error.message);
+      setError(formatAuthError(error));
     } finally {
       setLoading(false);
     }
@@ -64,7 +100,7 @@ const AuthModal = () => {
       await authFunction();
       handleClose();
     } catch (error) {
-      setError(error.message);
+      setError(formatAuthError(error));
     } finally {
       setLoading(false);
     }
@@ -78,7 +114,7 @@ const AuthModal = () => {
       await continueAsGuest();
       handleClose();
     } catch (error) {
-      setError(error.message);
+      setError(formatAuthError(error));
     } finally {
       setLoading(false);
     }

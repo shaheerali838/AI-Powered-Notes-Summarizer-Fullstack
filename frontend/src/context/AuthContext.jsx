@@ -96,15 +96,23 @@ export const AuthProvider = ({ children }) => {
         email,
         password
       );
-      if (displayName) {
-        await updateProfile(result.user, { displayName });
+      if (displayName && result.user) {
+        try {
+          await updateProfile(result.user, { displayName });
+        } catch (profileErr) {
+          console.warn("Could not update profile displayName:", profileErr);
+        }
       }
-      await setDoc(doc(db, "users", result.user.uid), {
-        email,
-        displayName: displayName || "",
-        createdAt: new Date(),
-        lastLoginAt: new Date(),
-      });
+      try {
+        await setDoc(doc(db, "users", result.user.uid), {
+          email,
+          displayName: displayName || "",
+          createdAt: new Date(),
+          lastLoginAt: new Date(),
+        });
+      } catch (dbErr) {
+        console.warn("Could not create user document in Firestore:", dbErr);
+      }
       return result.user;
     } catch (error) {
       console.error("Error signing up with email:", error);
