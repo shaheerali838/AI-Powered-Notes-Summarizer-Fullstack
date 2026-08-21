@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "buildCommand": "npm install",
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 30,
+        "includeFiles": [
+          "**/*.js",
+          "package.json",
+          "config/**",
+          "services/**",
+          "controllers/**",
+          "routes/**",
+          "middleware/**",
+          "middlewares/**",
+          "utils/**"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
