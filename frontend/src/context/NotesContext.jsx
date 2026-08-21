@@ -42,8 +42,15 @@ export const NotesProvider = ({ children }) => {
     setError("");
 
     try {
+      const tone = localStorage.getItem("pref_summary_tone") || "academic";
+      const length = localStorage.getItem("pref_summary_length") || "balanced";
+      const model = localStorage.getItem("pref_gemini_model") || "gemini-3.5-flash-lite";
+
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("tone", tone);
+      formData.append("length", length);
+      formData.append("model", model);
 
       const headers = {};
       if (user && !isGuest) {
@@ -55,7 +62,6 @@ export const NotesProvider = ({ children }) => {
         }
       }
 
-      // Simulate progress for smooth UX
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
@@ -81,7 +87,6 @@ export const NotesProvider = ({ children }) => {
       const summaryText = data.summary || "";
       const points = Array.isArray(data.keyPoints) ? data.keyPoints : [];
 
-      // Store the uploaded note data
       const noteData = {
         id: Date.now().toString(),
         filename: data.filename || file.name,
@@ -91,6 +96,7 @@ export const NotesProvider = ({ children }) => {
         uploadedAt: new Date(),
         fileType: file.type || file.name.split(".").pop(),
         fileSize: file.size,
+        model: data.model || model,
       };
 
       setCurrentNote(noteData);
@@ -99,12 +105,20 @@ export const NotesProvider = ({ children }) => {
         summary: summaryText,
         keyPoints: points,
         original: extracted,
+        model: data.model || model,
       });
 
-      // Add to uploaded notes history
       setUploadedNotes((prev) => [noteData, ...prev]);
 
-      // Save to storage based on user type
+      if (localStorage.getItem("pref_auto_copy") === "true" && summaryText) {
+        try {
+          const fullCopy = `${summaryText}\n\nKey Points:\n${points.join("\n")}`;
+          navigator.clipboard.writeText(fullCopy);
+        } catch (copyErr) {
+          console.warn("Auto copy failed:", copyErr);
+        }
+      }
+
       try {
         if (user && !isGuest) {
           await saveSummaryToFirestore({
@@ -114,6 +128,7 @@ export const NotesProvider = ({ children }) => {
             filename: data.filename || file.name,
             fileType: file.type || file.name.split(".").pop(),
             fileSize: file.size,
+            model: data.model || model,
           });
         } else {
           saveSummaryToSessionStorage({
@@ -123,6 +138,7 @@ export const NotesProvider = ({ children }) => {
             filename: data.filename || file.name,
             fileType: file.type || file.name.split(".").pop(),
             fileSize: file.size,
+            model: data.model || model,
           });
           fetchHistoryFromSessionStorage();
         }
@@ -141,7 +157,6 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Save summary to Firestore
   const saveSummaryToFirestore = async (summaryData) => {
     if (!user || isGuest) return null;
 
@@ -161,7 +176,6 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Save summary to sessionStorage (guest)
   const saveSummaryToSessionStorage = (summaryData) => {
     try {
       const guestSummaries = JSON.parse(
@@ -174,7 +188,7 @@ export const NotesProvider = ({ children }) => {
         fileType: summaryData.fileType || "text",
       };
       guestSummaries.unshift(newSummary);
-      if (guestSummaries.length > 10) guestSummaries.splice(10);
+      if (guestSummaries.length > 25) guestSummaries.splice(25);
       sessionStorage.setItem("guestSummaries", JSON.stringify(guestSummaries));
       return newSummary.id;
     } catch (error) {
@@ -183,7 +197,6 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Fetch history (Firestore)
   const fetchHistoryFromFirestore = () => {
     if (!user || isGuest || authLoading) return;
 
@@ -215,7 +228,6 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Fetch history (sessionStorage)
   const fetchHistoryFromSessionStorage = () => {
     try {
       const guestSummaries = JSON.parse(
@@ -228,29 +240,27 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Fetch history based on user type
   const fetchHistory = () => {
     if (authLoading) return;
-
     if (user && !isGuest) return fetchHistoryFromFirestore();
     if (isGuest) fetchHistoryFromSessionStorage();
     else setSummaryHistory([]);
   };
 
-  // Generate summary
   const generateSummary = async () => {
-    // 1. Validation
     if (!originalNotes.trim()) {
       setError("Please enter some text to summarize");
       return;
     }
 
-    // 2. Setup State
     setIsGenerating(true);
     setError("");
 
     try {
-      // 3. Define Headers
+      const tone = localStorage.getItem("pref_summary_tone") || "academic";
+      const length = localStorage.getItem("pref_summary_length") || "balanced";
+      const model = localStorage.getItem("pref_gemini_model") || "gemini-3.5-flash-lite";
+
       const headers = { "Content-Type": "application/json" };
 
       if (user && !isGuest) {
@@ -262,51 +272,58 @@ export const NotesProvider = ({ children }) => {
         }
       }
 
-      // 4. API Call
       const response = await fetch(`${API_URL}/api/summarize`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ text: originalNotes }),
+        body: JSON.stringify({
+          text: originalNotes,
+          tone,
+          length,
+          model,
+        }),
       });
 
-      // 5. Error Handling
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-
         const errorMessage =
           errorData.details ||
           errorData.error ||
           errorData.message ||
           "Failed to generate summary";
-
         throw new Error(errorMessage);
       }
 
-      // 6. Process Success Response
       const response_data = await response.json();
       const data = response_data.data || response_data;
 
       if (!data.summary || typeof data.summary !== "string") {
-        console.error("Invalid API response:", response_data);
-        throw new Error(
-          "API response is missing the summary field. Please check your backend API.",
-        );
+        throw new Error("Invalid API response format");
       }
 
       const summaryData = {
         originalContent: originalNotes,
         summarizedContent: data.summary,
         keyPoints: Array.isArray(data.keyPoints) ? data.keyPoints : [],
-        wordCount: originalNotes ? originalNotes.split(/\s+/).filter(Boolean).length : 0,
+        wordCount: originalNotes.split(/\s+/).filter(Boolean).length,
+        model: data.model || model,
       };
 
       setSummaryOutput({
         summary: data.summary,
         keyPoints: Array.isArray(data.keyPoints) ? data.keyPoints : [],
         original: originalNotes,
+        model: data.model || model,
       });
 
-      // 7. Save to History
+      if (localStorage.getItem("pref_auto_copy") === "true" && data.summary) {
+        try {
+          const fullCopy = `${data.summary}\n\nKey Points:\n${(data.keyPoints || []).join("\n")}`;
+          navigator.clipboard.writeText(fullCopy);
+        } catch (copyErr) {
+          console.warn("Auto-copy failed:", copyErr);
+        }
+      }
+
       try {
         if (user && !isGuest) await saveSummaryToFirestore(summaryData);
         else {
@@ -315,10 +332,6 @@ export const NotesProvider = ({ children }) => {
         }
       } catch (saveError) {
         console.error("Failed to save summary:", saveError);
-        setError(
-          "Summary generated but failed to save to history: " +
-            saveError.message,
-        );
       }
     } catch (err) {
       setError(err.message);
@@ -328,7 +341,6 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Delete summary
   const deleteSummary = async (id) => {
     try {
       if (user && !isGuest) {
@@ -337,13 +349,8 @@ export const NotesProvider = ({ children }) => {
         const guestSummaries = JSON.parse(
           sessionStorage.getItem("guestSummaries") || "[]",
         );
-        const updatedSummaries = guestSummaries.filter(
-          (item) => item.id !== id,
-        );
-        sessionStorage.setItem(
-          "guestSummaries",
-          JSON.stringify(updatedSummaries),
-        );
+        const updatedSummaries = guestSummaries.filter((item) => item.id !== id);
+        sessionStorage.setItem("guestSummaries", JSON.stringify(updatedSummaries));
         setSummaryHistory(updatedSummaries);
       }
     } catch (err) {
@@ -352,13 +359,13 @@ export const NotesProvider = ({ children }) => {
     }
   };
 
-  // Load summary
   const loadSummary = (summaryItem) => {
     setOriginalNotes(summaryItem.originalContent || summaryItem.original || "");
     setSummaryOutput({
       summary: summaryItem.summarizedContent || summaryItem.summary,
       keyPoints: summaryItem.keyPoints || [],
       original: summaryItem.originalContent || summaryItem.original,
+      model: summaryItem.model,
     });
     setError("");
   };

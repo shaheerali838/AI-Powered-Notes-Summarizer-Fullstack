@@ -1,10 +1,10 @@
-import { createContext, useState, useContext, useEffect } from 'react';
+﻿import { createContext, useState, useContext, useEffect } from "react";
 
 const UIContext = createContext();
 
 export const useUI = () => {
   const context = useContext(UIContext);
-  if (!context) throw new Error('useUI must be used within UIProvider');
+  if (!context) throw new Error("useUI must be used within UIProvider");
   return context;
 };
 
@@ -12,41 +12,42 @@ export const UIProvider = ({ children }) => {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
 
   useEffect(() => {
-    // Load sidebar preference from localStorage
-    const savedState = localStorage.getItem('sidebarExpanded');
-    if (savedState !== null) {
-      setSidebarExpanded(JSON.parse(savedState));
-    }
-
-    // Set up responsive breakpoint detection
     const checkBreakpoints = () => {
       const width = window.innerWidth;
-      setIsMobile(width <= 480);
-      setIsTablet(width <= 768 && width > 480);
-      
-      // Auto-collapse on tablet/mobile
-      if (width <= 768) {
+      const mobileView = width < 1024;
+      setIsMobile(mobileView);
+
+      if (mobileView) {
         setSidebarExpanded(false);
+      } else {
+        const savedState = localStorage.getItem("sidebarExpanded");
+        if (savedState !== null) {
+          setSidebarExpanded(JSON.parse(savedState));
+        } else {
+          setSidebarExpanded(true);
+        }
       }
     };
 
     checkBreakpoints();
-    window.addEventListener('resize', checkBreakpoints);
-    
-    return () => window.removeEventListener('resize', checkBreakpoints);
+    window.addEventListener("resize", checkBreakpoints);
+    return () => window.removeEventListener("resize", checkBreakpoints);
   }, []);
 
   const toggleSidebar = () => {
-    const newState = !sidebarExpanded;
-    setSidebarExpanded(newState);
-    localStorage.setItem('sidebarExpanded', JSON.stringify(newState));
+    setSidebarExpanded((prev) => {
+      const newState = !prev;
+      if (!isMobile) {
+        localStorage.setItem("sidebarExpanded", JSON.stringify(newState));
+      }
+      return newState;
+    });
   };
 
   const toggleHistory = () => {
-    setHistoryExpanded(!historyExpanded);
+    setHistoryExpanded((prev) => !prev);
   };
 
   return (
@@ -59,7 +60,6 @@ export const UIProvider = ({ children }) => {
         setHistoryExpanded,
         toggleHistory,
         isMobile,
-        isTablet,
       }}
     >
       {children}

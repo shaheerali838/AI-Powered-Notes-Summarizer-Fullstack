@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+﻿import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import { useUI } from "../context/UIContext";
@@ -7,21 +7,18 @@ const Layout = () => {
   const { sidebarExpanded, isMobile } = useUI();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Fixed Navbar at top */}
+    <div className="h-screen w-screen overflow-hidden bg-slate-50 flex flex-col antialiased">
+      {/* 1. Fixed Top Navbar */}
       <Navbar />
 
-      {/* Content area below navbar */}
-      <div
-        className="flex overflow-hidden relative"
-        style={{ height: "calc(100vh - 64px)", marginTop: "64px" }}
-      >
-        {/* Sidebar */}
+      {/* 2. Content Viewport Container below Navbar (64px) */}
+      <div className="flex-1 flex overflow-hidden relative mt-16">
+        {/* Fixed Left Sidebar */}
         <Sidebar />
 
-        {/* Main content area */}
+        {/* 3. Main Workspace Area (locked to viewport, independent internal scrolling) */}
         <main
-          className={`flex-1 overflow-auto p-6 transition-all duration-300 ease-in-out ${
+          className={`flex-1 h-[calc(100vh-4rem)] overflow-hidden transition-all duration-300 ease-in-out p-3 sm:p-4 md:p-6 ${
             isMobile ? "ml-0" : sidebarExpanded ? "ml-64" : "ml-16"
           }`}
         >

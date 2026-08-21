@@ -1,12 +1,8 @@
 ﻿export const summarizeController = async (req, res) => {
   try {
-    // Accept both 'text' and 'originalContent' for backward compatibility
-    const { text, originalContent } = req.body;
-
-    // Normalize input - prefer 'text' over 'originalContent'
+    const { text, originalContent, tone = "academic", length = "balanced", model } = req.body;
     const inputText = text || originalContent;
 
-    // Input validation
     if (!inputText) {
       return res.status(400).json({
         success: false,
@@ -23,11 +19,10 @@
       });
     }
 
-    // Text length validation (min 10 chars, max 50000 chars)
-    if (inputText.trim().length < 10) {
+    if (inputText.trim().length < 5) {
       return res.status(400).json({
         success: false,
-        error: "Text must be at least 10 characters long",
+        error: "Text must be at least 5 characters long",
         statusCode: 400,
       });
     }
@@ -40,21 +35,19 @@
       });
     }
 
-    // Lazy load services
     const [{ summarizeWithGemini }, { saveSummary }] = await Promise.all([
       import("../services/summarizerService.js"),
       import("../services/historyServices.js"),
     ]);
 
     const summarizeTimeoutMs = Number(process.env.SUMMARIZE_TIMEOUT_MS || 35000);
-    const { summary, keyPoints } = await Promise.race([
-      summarizeWithGemini(inputText),
+    const { summary, keyPoints, model: usedModel } = await Promise.race([
+      summarizeWithGemini(inputText, { tone, length, model }),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Summarization timed out")), summarizeTimeoutMs),
+        setTimeout(() => reject(new Error("Summarization timed out")), summarizeTimeoutMs)
       ),
     ]);
 
-    // Optional background/server save (does not crash summarization if disabled or failing)
     let saved = {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
@@ -80,6 +73,8 @@
         summary,
         keyPoints: keyPoints || [],
         timestamp: saved?.timestamp || new Date().toISOString(),
+        model: usedModel,
+        options: { tone, length },
       },
     });
   } catch (err) {

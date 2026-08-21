@@ -1,112 +1,217 @@
-import { Sparkles, Copy } from "lucide-react";
-import { useState } from "react";
+﻿import { useState } from "react";
+import {
+  Sparkles,
+  Copy,
+  Check,
+  BookOpen,
+  ListOrdered,
+  TrendingDown,
+} from "lucide-react";
 import { useNotes } from "../context/NotesContext";
 
 const SummaryDisplay = () => {
-  const { summaryOutput, isGenerating, currentNote } = useNotes();
+  const { summaryOutput, isGenerating, originalNotes, currentNote } = useNotes();
   const [copied, setCopied] = useState(false);
 
-  // Use summary from current note if available, otherwise use summaryOutput
   const summaryText = currentNote?.summary || summaryOutput?.summary || "";
   let keyPoints = currentNote?.keyPoints || summaryOutput?.keyPoints || [];
 
-  // Remove unwanted heading lines if present
   if (keyPoints.length && keyPoints[0].includes("Re-Summarized")) {
     keyPoints = keyPoints.slice(1);
   }
 
-  // Copy summary + key points
+  // Calculate reduction metrics
+  const originalWords = (originalNotes || currentNote?.extractedText || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+  const summaryWords = summaryText.trim().split(/\s+/).filter(Boolean).length;
+  const reductionPercent =
+    originalWords > 0 && summaryWords > 0
+      ? Math.max(0, Math.round(((originalWords - summaryWords) / originalWords) * 100))
+      : 0;
+
+  const showMetrics = localStorage.getItem("pref_show_metrics") !== "false";
+
   const handleCopy = () => {
     if (!summaryText) return;
-    let textToCopy = summaryText;
+    let fullText = summaryText;
     if (keyPoints.length > 0) {
-      textToCopy += "\n\nKey Points:\n" + keyPoints.join("\n");
+      fullText += "\n\nKey Points:\n" + keyPoints.join("\n");
     }
-    navigator.clipboard.writeText(textToCopy);
+    navigator.clipboard.writeText(fullText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Convert numbered flat list into nested tree
-  const buildTree = (points) => {
-    const root = [];
-    const stack = [{ level: 0, children: root }];
+  // Helper to parse numbering and render point values in bold
+  const renderPointItem = (point, index) => {
+    const trimmed = point.trim();
+    // Matches numbering patterns like "1.", "5.1", "5.1.2", "10.2", etc.
+    const numberMatch = trimmed.match(/^(\d+(?:\.\d+)*\.?)\s*(.*)$/);
 
-    points.forEach((point) => {
-      const match = point.match(/^(\d+(\.\d+)*)\s/);
-      const level = match ? match[1].split(".").length : 1;
-      const node = { text: point, children: [] };
+    if (numberMatch) {
+      const [, numberPart, textPart] = numberMatch;
+      const dotCount = (numberPart.match(/\./g) || []).length;
+      const isSubPoint = dotCount >= 1 && !numberPart.endsWith(".");
+      const isDeepNested = dotCount >= 2;
 
-      while (stack.length > level) stack.pop();
-      stack[stack.length - 1].children.push(node);
-      stack.push({ level, children: node.children });
-    });
+      let indentClass = "";
+      let borderClass = "border border-slate-200/70 bg-white shadow-2xs";
+      let numColor = "text-slate-900 font-bold";
 
-    return root;
+      if (isDeepNested) {
+        indentClass = "ml-8 bg-slate-50/90 border-l-2 border-indigo-400 pl-3.5";
+        numColor = "text-indigo-600 font-bold";
+      } else if (isSubPoint) {
+        indentClass = "ml-4 bg-slate-50/80 border-l-2 border-blue-500 pl-3.5";
+        numColor = "text-blue-600 font-bold";
+      }
+
+      return (
+        <div
+          key={index}
+          className={`p-3 rounded-xl text-sm leading-snug transition-all ${indentClass || borderClass}`}
+        >
+          <div className="flex items-start gap-2">
+            <span className={`flex-shrink-0 tracking-tight ${numColor}`}>
+              {numberPart}
+            </span>
+            <span className="flex-1 text-slate-700 leading-relaxed font-normal">
+              {textPart}
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    // Fallback for non-numbered bullet lines
+    const isIndented = point.startsWith("  ") || point.startsWith("\t");
+    return (
+      <div
+        key={index}
+        className={`p-3 rounded-xl text-sm leading-snug transition-all ${
+          isIndented
+            ? "ml-4 bg-slate-50/80 text-slate-600 border-l-2 border-blue-400 pl-3.5"
+            : "bg-white border border-slate-200/70 text-slate-800 font-medium shadow-2xs"
+        }`}
+      >
+        {trimmed}
+      </div>
+    );
   };
 
-  // Recursively render tree
-  const renderTree = (nodes) => (
-    <ul className=" ml-6 space-y-1">
-      {nodes.map((node, i) => (
-        <li key={i}>
-          {node.text}
-          {node.children.length > 0 && renderTree(node.children)}
-        </li>
-      ))}
-    </ul>
-  );
-
-  const tree = buildTree(keyPoints);
-
   return (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm h-full relative">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <Sparkles className="h-5 w-5 text-blue-600" />
-        <h2 className="text-lg font-semibold text-gray-900">
-          Summarized Output
-        </h2>
-      </div>
-
-      {/* Content */}
-      <div className="mt-4 h-[calc(100%-3rem)] overflow-auto space-y-4">
-        {isGenerating ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden min-h-0">
+      {/* 1. Header with Status & Copy Action */}
+      <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+            <Sparkles className="w-4 h-4" />
           </div>
-        ) : summaryText ? (
-          <div className="text-gray-700 whitespace-pre-line">
-            <h3 className="text-md font-semibold mb-2">Summary</h3>
-            <p className="mb-4">{summaryText}</p>
+          <h2 className="font-semibold text-slate-800 text-sm">
+            AI Summarized Output
+          </h2>
+        </div>
 
-            {tree.length > 0 && (
-              <div>
-                <h3 className="text-md font-semibold mb-2">Key Points</h3>
-                {renderTree(tree)}
-              </div>
+        {summaryText && !isGenerating && (
+          <div className="flex items-center gap-2">
+            {showMetrics && reductionPercent > 0 && (
+              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-2xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <TrendingDown className="w-3 h-3" />
+                <span>{reductionPercent}% shorter</span>
+              </span>
             )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="h-4 bg-gray-100 rounded w-full"></div>
-            <div className="h-4 bg-gray-100 rounded w-5/6"></div>
-            <div className="h-4 bg-gray-100 rounded w-4/6"></div>
-            <div className="h-4 bg-gray-100 rounded w-full"></div>
+            <button
+              onClick={handleCopy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition cursor-pointer shadow-2xs"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-emerald-600">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
           </div>
         )}
       </div>
 
-      {/* Copy Button */}
-      {summaryText && (
-        <button
-          onClick={handleCopy}
-          className="absolute bottom-6 right-6 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
-        >
-          <Copy className="h-4 w-4" />
-          <span>{copied ? "Copied!" : "Copy"}</span>
-        </button>
-      )}
+      {/* 2. Scrollable Output Body (Pure Tailwind Scrollbars) */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 [scrollbar-width:thin] [scrollbar-color:theme(colors.slate.300)_transparent]">
+        {isGenerating ? (
+          /* Shimmer Skeleton Loader */
+          <div className="space-y-6 animate-pulse">
+            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+              <div className="h-4 bg-slate-200 rounded-md w-1/3 mb-2" />
+              <div className="h-3.5 bg-slate-200/70 rounded-md w-full" />
+              <div className="h-3.5 bg-slate-200/70 rounded-md w-11/12" />
+              <div className="h-3.5 bg-slate-200/70 rounded-md w-4/5" />
+            </div>
+            <div className="space-y-3">
+              <div className="h-4 bg-slate-200 rounded-md w-1/4" />
+              <div className="h-3.5 bg-slate-200/70 rounded-md w-10/12" />
+              <div className="h-3.5 bg-slate-200/70 rounded-md w-9/12 ml-4" />
+              <div className="h-3.5 bg-slate-200/70 rounded-md w-11/12" />
+              <div className="h-3.5 bg-slate-200/70 rounded-md w-8/12 ml-4" />
+            </div>
+          </div>
+        ) : summaryText ? (
+          /* Populated State */
+          <>
+            {/* Executive Summary Card */}
+            <div className="bg-gradient-to-br from-slate-50 to-indigo-50/40 p-5 rounded-2xl border border-slate-200/70 shadow-2xs">
+              <div className="flex items-center gap-2 mb-2 text-indigo-700">
+                <BookOpen className="w-4 h-4" />
+                <h3 className="text-xs font-bold uppercase tracking-wider">
+                  Summary Overview
+                </h3>
+              </div>
+              <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-line">
+                {summaryText}
+              </p>
+            </div>
+
+            {/* Hierarchical Key Points */}
+            {keyPoints.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-slate-800">
+                  <ListOrdered className="w-4 h-4 text-blue-600" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Key Study Points
+                  </h3>
+                </div>
+
+                <div className="space-y-2">
+                  {keyPoints.map((point, index) => renderPointItem(point, index))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Empty State */
+          <div className="h-full min-h-[260px] flex flex-col items-center justify-center text-center p-6 text-slate-400">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+              <Sparkles className="w-7 h-7 text-slate-300" />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-1">
+              Ready to Summarize
+            </h3>
+            <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+              Enter your notes on the left panel or upload a file, then click{" "}
+              <strong className="text-slate-600 font-semibold">
+                Generate Summary
+              </strong>{" "}
+              to view AI-extracted study notes.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

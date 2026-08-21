@@ -1,71 +1,77 @@
-import { useEffect, useState } from 'react';
-import UploadNotes from '../components/UploadNotes';
-import NotesDisplay from '../components/NotesDisplay';
-import SummaryDisplay from '../components/SummaryDisplay';
-import GenerateButton from '../components/GenerateButton';
-import { useNotes } from '../context/NotesContext';
-import { useUI } from '../context/UIContext';
+﻿import { useState, useEffect } from "react";
+import { FileText, Sparkles } from "lucide-react";
+import UploadNotes from "../components/UploadNotes";
+import SummaryDisplay from "../components/SummaryDisplay";
+import { useNotes } from "../context/NotesContext";
 
 const HomePage = () => {
-  const { originalNotes, summaryOutput } = useNotes();
-  const { isMobile } = useUI();
-  const [showResults, setShowResults] = useState(false);
+  const { summaryOutput } = useNotes();
+  const [mobileTab, setMobileTab] = useState("input"); // 'input' | 'output'
 
   useEffect(() => {
-    document.title = 'AI Notes Summarizer - Home';
+    document.title = "AI Notes Summarizer - Workspace";
   }, []);
-  
+
+  // When a summary is generated, switch to output tab on mobile
   useEffect(() => {
-    setShowResults(!!summaryOutput);
+    if (summaryOutput) {
+      setMobileTab("output");
+    }
   }, [summaryOutput]);
 
   return (
-    <div className="container mx-auto max-w-6xl">
-      {!showResults ? (
-        /* Initial Upload State */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">
-          {/* Upload Section */}
-          <div className="lg:col-span-1 flex flex-col">
-            <UploadNotes />
-          </div>
-          
-          {/* Generate Button */}
-          <div className="lg:col-span-2 flex flex-col">
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center space-y-6">
-                <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
-                  <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Ready to Summarize</h2>
-                  <p className="text-gray-600 mb-6">Enter your notes and click generate to create an AI-powered summary</p>
-                  <GenerateButton />
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="h-full w-full max-w-7xl mx-auto flex flex-col min-h-0">
+      {/* Mobile Tab Switcher (< lg screens) */}
+      <div className="lg:hidden flex items-center justify-center mb-2.5 flex-shrink-0">
+        <div className="bg-slate-200/80 p-1 rounded-xl flex items-center gap-1 w-full max-w-xs shadow-inner">
+          <button
+            onClick={() => setMobileTab("input")}
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              mobileTab === "input"
+                ? "bg-white text-blue-600 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Source Notes</span>
+          </button>
+          <button
+            onClick={() => setMobileTab("output")}
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              mobileTab === "output"
+                ? "bg-white text-blue-600 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI Summary</span>
+            {summaryOutput && (
+              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+            )}
+          </button>
         </div>
-      ) : (
-        /* Post-Generation State */
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-8rem)]">
-          {/* Original Notes */}
-          <div className="flex flex-col">
-            <NotesDisplay />
-          </div>
-          
-          {/* Summarized Output */}
-          <div className="flex flex-col">
-            <SummaryDisplay />
-            
-            {/* Generate New Summary Button */}
-            <div className="mt-4 flex justify-center">
-              <GenerateButton />
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
+
+      {/* 2-Column Split Workspace */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5 min-h-0 overflow-hidden">
+        {/* Left Column: Input, Upload, Stats & Action Bar */}
+        <section
+          className={`h-full min-h-0 flex flex-col ${
+            mobileTab === "input" ? "flex" : "hidden lg:flex"
+          }`}
+        >
+          <UploadNotes />
+        </section>
+
+        {/* Right Column: AI Summary Output, Skeleton Loader, or Empty State */}
+        <section
+          className={`h-full min-h-0 flex flex-col ${
+            mobileTab === "output" ? "flex" : "hidden lg:flex"
+          }`}
+        >
+          <SummaryDisplay />
+        </section>
+      </div>
     </div>
   );
 };

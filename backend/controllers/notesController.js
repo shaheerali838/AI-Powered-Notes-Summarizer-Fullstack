@@ -1,11 +1,9 @@
-/**
+﻿/**
  * Handle file upload and processing
  */
 export const uploadFileController = async (req, res) => {
   try {
-    // Check if file was uploaded
     if (!req.file) {
-      // Import responseFormatter mainly for error cases
       const { formatErrorResponse } = await import(
         "../utils/responseFormatter.js"
       );
@@ -14,7 +12,8 @@ export const uploadFileController = async (req, res) => {
         .json(formatErrorResponse("No file uploaded", 400));
     }
 
-    // Lazy load dependencies to improve cold start
+    const { tone = "academic", length = "balanced", model } = req.body || {};
+
     const [
       { extractTextFromFile, getFileTypeDescription },
       { summarizeWithGemini },
@@ -31,11 +30,11 @@ export const uploadFileController = async (req, res) => {
 
     console.log(
       `📁 Processing file: ${originalname} (${getFileTypeDescription(
-        mimetype
+        mimetype,
+        originalname
       )}, ${(size / 1024 / 1024).toFixed(2)}MB)`
     );
 
-    // Extract text from file
     let extractedText;
     try {
       extractedText = await extractTextFromFile(req.file);
@@ -52,13 +51,13 @@ export const uploadFileController = async (req, res) => {
         );
     }
 
-    // Summarize extracted text
-    let summary, keyPoints;
+    let summary, keyPoints, usedModel;
     try {
-      const summaryResult = await summarizeWithGemini(extractedText);
+      const summaryResult = await summarizeWithGemini(extractedText, { tone, length, model });
       summary = summaryResult.summary;
       keyPoints = summaryResult.keyPoints;
-      console.log("✅ Text summarized successfully");
+      usedModel = summaryResult.model;
+      console.log("✅ Text summarized successfully with " + usedModel);
     } catch (summaryError) {
       console.error("❌ Summarization failed:", summaryError);
       return res
@@ -71,16 +70,13 @@ export const uploadFileController = async (req, res) => {
         );
     }
 
-    // Save to history
     try {
       await saveSummary(extractedText, summary, keyPoints);
       console.log("✅ Summary saved to history");
     } catch (saveError) {
       console.error("⚠️ Failed to save to history:", saveError);
-      // Don't fail the request if history save fails
     }
 
-    // Return formatted response
     const response = formatFileUploadResponse(
       originalname,
       extractedText,
@@ -88,11 +84,9 @@ export const uploadFileController = async (req, res) => {
       keyPoints
     );
 
-    res.status(200).json(response);
+    res.status(200).json({ ...response, model: usedModel });
   } catch (error) {
     console.error("❌ Upload controller error:", error);
-    // Dynamic import might confuse formatErrorResponse usage if not careful,
-    // safe fallback if imports failed
     res.status(500).json({ error: "Internal server error occurred" });
   }
 };
